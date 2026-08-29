@@ -1,0 +1,9 @@
+<div class="loading-state" role="status">
+    <span class="spinner" aria-hidden="true"></span>
+    <span>@(Message ?? "Завантаження…")</span>
+</div>
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+}

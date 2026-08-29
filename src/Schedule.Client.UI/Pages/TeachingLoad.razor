@@ -1,0 +1,124 @@
+@page "/teaching-load"
+@inject IScheduleApiClient ApiClient
+@inject ReferenceDataState ReferenceState
+
+<PageTitle>Навчальне навантаження</PageTitle>
+<h1>Навчальне навантаження</h1>
+<p class="muted">Години розраховуються як кількість пар × 2.</p>
+
+@if (ReferenceState.IsLoading)
+{
+    <LoadingIndicator Message="Завантаження підрозділів…" />
+}
+else if (ReferenceState.Data is null)
+{
+    <ErrorAlert Message="@(ReferenceState.ErrorMessage ?? "Не вдалося завантажити довідники.")" />
+}
+else
+{
+    <section class="search-panel">
+        <div class="form-grid">
+            <label class="form-grid__wide">
+                Підрозділ
+                <select @bind="department">
+                    <option value="">Оберіть підрозділ</option>
+                    @foreach (DepartmentDto item in ReferenceState.Data.TeacherDepartments)
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
+            </label>
+            <label>
+                Від дати
+                <input type="date" @bind="fromDate" />
+            </label>
+            <label>
+                До дати
+                <input type="date" @bind="toDate" />
+            </label>
+        </div>
+        <div class="search-actions">
+            <button class="primary-button" type="button" @onclick="LoadAsync" disabled="@isLoading">
+                @(isLoading ? "Розрахунок…" : "Розрахувати")
+            </button>
+        </div>
+    </section>
+
+    <ErrorAlert Message="@errorMessage" />
+
+    @if (result is not null)
+    {
+        <section class="schedule-result result-table">
+            <div class="result-heading">
+                <h2>Викладачі</h2>
+                <span class="period-label">@result.Rows.Count викладачів</span>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Викладач</th>
+                            @foreach (string type in result.SessionTypes)
+                            {
+                                <th>@type</th>
+                            }
+                            <th>Всього</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (TeachingLoadRowDto row in result.Rows)
+                        {
+                            <tr>
+                                <td><strong>@row.TeacherName</strong></td>
+                                @foreach (string type in result.SessionTypes)
+                                {
+                                    <td>@row.HoursByType.GetValueOrDefault(type)</td>
+                                }
+                                <td><strong>@row.TotalHours</strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private string department = string.Empty;
+    private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+    private TeachingLoadResponse? result;
+    private string? errorMessage;
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReferenceState.EnsureLoadedAsync(ApiClient);
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(department))
+        {
+            errorMessage = "Оберіть підрозділ.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        result = null;
+        try
+        {
+            result = await ApiClient.GetTeachingLoadAsync(department, fromDate, toDate);
+        }
+        catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

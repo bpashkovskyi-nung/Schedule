@@ -5,3 +5,7 @@
 /.vs
 /Schedule.UnitTests/bin
 /Schedule.UnitTests/obj
+
+# Build outputs for all projects, including the migrated src/ projects
+**/bin/
+**/obj/

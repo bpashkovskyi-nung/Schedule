@@ -1,0 +1,120 @@
+@page "/"
+@page "/schedule"
+@inject IScheduleApiClient ApiClient
+@inject ReferenceDataState ReferenceState
+@inject ScheduleState ScheduleState
+
+<PageTitle>Розклад занять</PageTitle>
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Schedule</p>
+        <h1>Розклад занять</h1>
+        <p class="muted">Оберіть групу, викладача або аудиторію та період.</p>
+    </div>
+</div>
+
+@if (ReferenceState.IsLoading)
+{
+    <LoadingIndicator Message="Завантаження довідників…" />
+}
+else if (ReferenceState.Data is null)
+{
+    <ErrorAlert Message="@(ReferenceState.ErrorMessage ?? "Не вдалося завантажити довідники.")" />
+}
+else
+{
+    <section class="search-panel">
+        <div class="form-grid">
+            <label>
+                Тип пошуку
+                <select @bind="targetType">
+                    <option value="@ScheduleTargetType.Group">Група</option>
+                    <option value="@ScheduleTargetType.Teacher">Викладач</option>
+                    <option value="@ScheduleTargetType.Room">Аудиторія</option>
+                </select>
+            </label>
+
+            <label class="form-grid__wide">
+                Об’єкт
+                <select @bind="selectedObjectId">
+                    <option value="">Оберіть об’єкт</option>
+                    @foreach (ScheduleEntityDto entity in CurrentEntities)
+                    {
+                        <option value="@entity.Id">@GetEntityLabel(entity)</option>
+                    }
+                </select>
+            </label>
+
+            <label>
+                Від дати
+                <input type="date" @bind="fromDate" />
+            </label>
+
+            <label>
+                До дати
+                <input type="date" @bind="toDate" />
+            </label>
+        </div>
+
+        <div class="search-actions">
+            <button class="primary-button" type="button" @onclick="LoadScheduleAsync" disabled="@ScheduleState.IsLoading">
+                @(ScheduleState.IsLoading ? "Завантаження…" : "Показати розклад")
+            </button>
+            @if (ScheduleState.Result is not null && !string.IsNullOrWhiteSpace(selectedObjectId))
+            {
+                <a class="secondary-button" href="@GetIcalUri()" target="_blank" rel="noopener">Експорт iCal</a>
+            }
+        </div>
+    </section>
+
+    <ErrorAlert Message="@ScheduleState.ErrorMessage" />
+
+    @if (ScheduleState.IsLoading)
+    {
+        <LoadingIndicator />
+    }
+    else if (ScheduleState.Result is not null)
+    {
+        <ScheduleResult Result="@ScheduleState.Result" />
+    }
+}
+
+@code {
+    private ScheduleTargetType targetType = ScheduleTargetType.Group;
+    private string selectedObjectId = string.Empty;
+    private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReferenceState.EnsureLoadedAsync(ApiClient);
+    }
+
+    private IReadOnlyList<ScheduleEntityDto> CurrentEntities
+    {
+        get
+        {
+            if (ReferenceState.Data is null) return [];
+
+            return targetType switch
+            {
+                ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments.SelectMany(x => x.Entities).ToList(),
+                ScheduleTargetType.Room => ReferenceState.Data.Buildings.SelectMany(x => x.Rooms).ToList(),
+                _ => ReferenceState.Data.GroupDepartments.SelectMany(x => x.Entities).ToList(),
+            };
+        }
+    }
+
+    private string GetEntityLabel(ScheduleEntityDto entity) =>
+        targetType == ScheduleTargetType.Teacher ? entity.FullName : entity.Name;
+
+    private async Task LoadScheduleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(selectedObjectId)) return;
+        await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
+    }
+
+    private string GetIcalUri() =>
+        ApiClient.GetIcalUri(targetType, selectedObjectId, fromDate, toDate).ToString();
+}

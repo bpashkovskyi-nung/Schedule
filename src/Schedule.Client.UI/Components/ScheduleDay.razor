@@ -1,0 +1,33 @@
+<section class="day-card">
+    <header class="day-card__header">
+        <strong>@Title</strong>
+        <span>@Date.ToString("dd.MM.yyyy")</span>
+    </header>
+
+    <div class="day-card__body">
+        @if (Lessons.Count == 0)
+        {
+            <p class="muted">Немає занять</p>
+        }
+        else
+        {
+            @foreach (LessonDto lesson in Lessons.OrderBy(x => x.LessonNumber, StringComparer.Ordinal))
+            {
+                <LessonCard Lesson="lesson" />
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public DateOnly Date { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<LessonDto> Lessons { get; set; } = [];
+
+    [Parameter]
+    public string? DayName { get; set; }
+
+    private string Title => string.IsNullOrWhiteSpace(DayName) ? Date.ToString("dddd") : DayName;
+}

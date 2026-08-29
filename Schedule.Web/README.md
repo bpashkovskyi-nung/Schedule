@@ -1,4 +1,6 @@
-# Розклад занять
+# Legacy MVC-клієнт розкладу
+
+Цей проєкт тимчасово залишений для безпечної міграції. Новий клієнт розташований у `src/Schedule.Web` і працює через `src/Schedule.Api`.
 
 Додаток для перегляду розкладу занять НУНГ на **ASP.NET Core MVC** з інтеграцією [Dekanat.ScheduleSdk](https://www.nuget.org/packages/Dekanat.ScheduleSdk).
 
