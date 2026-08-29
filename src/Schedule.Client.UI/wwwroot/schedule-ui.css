@@ -52,6 +52,20 @@ p {
     font-weight: 600;
 }
 
+.checkbox-field__control {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 2.7rem;
+    color: #475569;
+    font-weight: 400;
+}
+
+.checkbox-field__control input {
+    width: 1.1rem;
+    min-height: 1.1rem;
+}
+
 .form-grid__wide {
     grid-column: span 2;
 }
@@ -136,6 +150,29 @@ input {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
+}
+
+.weeks-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.week-block {
+    padding: 1rem;
+    border: 1px solid #dce4f0;
+    border-radius: .8rem;
+    background: #f8fafc;
+}
+
+.week-block__header {
+    margin-bottom: 1rem;
+    color: #12345b;
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .75rem;
 }
 
 .day-card {
@@ -233,6 +270,10 @@ th {
     .form-grid__wide {
         grid-column: span 2;
     }
+
+    .week-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 520px) {
@@ -253,6 +294,10 @@ th {
 
     .form-grid__wide {
         grid-column: auto;
+    }
+
+    .week-grid {
+        grid-template-columns: 1fr;
     }
 
     .page-heading,

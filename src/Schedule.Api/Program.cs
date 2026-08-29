@@ -1,5 +1,6 @@
 using Dekanat.ScheduleSdk.DependencyInjection;
 using Schedule.Api.Configuration;
+using Schedule.Api.Middleware;
 using Schedule.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +28,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<ApiExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

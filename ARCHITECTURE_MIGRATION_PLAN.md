@@ -16,6 +16,19 @@
 
 Ключовий результат: Web і Android використовують однакові Razor-компоненти та клієнтську логіку, а жоден клієнт не звертається безпосередньо до `Dekanat.ScheduleSdk` або `timetable.cgi`.
 
+## Статус виконання
+
+Стан на 29.08.2026 у гілці `codex/schedule-api-blazor-maui`:
+
+- [x] Створено `Schedule.Api`, `Schedule.Contracts`, `Schedule.Client.Core`, `Schedule.Client.UI`, `Schedule.Web` і `Schedule.Mobile`.
+- [x] Винесено SDK-інтеграцію в API та додано endpoint-и розкладу, довідників, suggestions і workload.
+- [x] Додано спільний typed HTTP client, state-сервіси та Razor UI для Web/Android.
+- [x] Додано кеш довідників API та єдиний формат помилок для клієнтів.
+- [x] Додано unit-тести API-розрахунків і HTTP-клієнта.
+- [x] Legacy MVC залишено ізольованим для безпечного переходу; він ще присутній у solution і буде видалений після приймання нових клієнтів.
+- [ ] Додати production URL/API deployment settings, Android signing, notifications і platform-specific storage.
+- [ ] Перенести або видалити legacy MVC після перевірки нової Web/Android версії.
+
 ---
 
 ## 2. Поточний стан проєкту
@@ -870,4 +883,3 @@ https://schedule.nung.edu.ua
 10. `chore: remove legacy mvc` — видалення старого MVC-коду після порівняння результатів.
 
 На кожному кроці бажано залишати solution у стані, який збирається і проходить тести.
-

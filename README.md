@@ -28,6 +28,8 @@ Legacy та нові проєкти:
 - `src/Schedule.Client.UI/Schedule.Client.UI.csproj`
 - `src/Schedule.Web/Schedule.Web/Schedule.Web.csproj`
 - `src/Schedule.Mobile/Schedule.Mobile.csproj`
+- `tests/Schedule.Api.UnitTests/Schedule.Api.UnitTests.csproj`
+- `tests/Schedule.Client.Core.UnitTests/Schedule.Client.Core.UnitTests.csproj`
 
 ## Вимоги
 
@@ -41,6 +43,9 @@ dotnet run --project src/Schedule.Api
 
 API після запуску доступний на `http://localhost:5274`.
 
+API кешує довідники на 10 хвилин і повертає помилки клієнтам у форматі
+`{ "code": "...", "message": "...", "traceId": "..." }`.
+
 ## Запуск нового Web-клієнта
 
 В іншому терміналі:
@@ -50,6 +55,7 @@ dotnet run --project src/Schedule.Web/Schedule.Web
 ```
 
 Web-клієнт використовує `ApiBaseUrl` із `src/Schedule.Web/Schedule.Web/appsettings.Development.json`.
+Спільна сторінка розкладу підтримує список занять і тижневий вигляд.
 
 ## Запуск Android
 

@@ -10,6 +10,10 @@
     <Project Path="src/Schedule.Web/Schedule.Web.Client/Schedule.Web.Client.csproj" />
     <Project Path="src/Schedule.Web/Schedule.Web/Schedule.Web.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Schedule.Api.UnitTests/Schedule.Api.UnitTests.csproj" />
+    <Project Path="tests/Schedule.Client.Core.UnitTests/Schedule.Client.Core.UnitTests.csproj" />
+  </Folder>
   <Project Path="Schedule.UnitTests/Schedule.UnitTests.csproj" />
   <Project Path="Schedule.Web/Schedule.Web.csproj" />
 </Solution>

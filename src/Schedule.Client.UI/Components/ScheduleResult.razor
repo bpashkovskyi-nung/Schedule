@@ -18,21 +18,53 @@ else
             <span class="period-label">@Result.Period.From.ToString("dd.MM.yyyy") — @Result.Period.To.ToString("dd.MM.yyyy")</span>
         </div>
 
-        <div class="days-grid">
-            @foreach (IGrouping<DateOnly, LessonDto> day in Result.Lessons
-                .Where(x => x.Date.HasValue)
-                .GroupBy(x => x.Date!.Value)
-                .OrderBy(x => x.Key))
-            {
-                <ScheduleDay Date="@day.Key" Lessons="@day.ToList()" DayName="@GetDayName(day.Key)" />
-            }
-        </div>
+        @if (WeeklyView)
+        {
+            <div class="weeks-list">
+                @foreach (DateOnly weekStart in GetWeekStarts())
+                {
+                    <ScheduleWeek WeekStart="weekStart" Lessons="@Result.Lessons" />
+                }
+            </div>
+        }
+        else
+        {
+            <div class="days-grid">
+                @foreach (IGrouping<DateOnly, LessonDto> day in Result.Lessons
+                    .Where(x => x.Date.HasValue)
+                    .GroupBy(x => x.Date!.Value)
+                    .OrderBy(x => x.Key))
+                {
+                    <ScheduleDay Date="@day.Key" Lessons="@day.ToList()" DayName="@GetDayName(day.Key)" />
+                }
+            </div>
+        }
     </section>
 }
 
 @code {
     [Parameter, EditorRequired]
     public ScheduleResponse Result { get; set; } = default!;
+
+    [Parameter]
+    public bool WeeklyView { get; set; }
+
+    private IEnumerable<DateOnly> GetWeekStarts()
+    {
+        DateOnly firstWeek = StartOfWeek(Result.Period.From);
+        DateOnly lastWeek = StartOfWeek(Result.Period.To);
+
+        for (DateOnly week = firstWeek; week <= lastWeek; week = week.AddDays(7))
+        {
+            yield return week;
+        }
+    }
+
+    private static DateOnly StartOfWeek(DateOnly date)
+    {
+        int daysFromMonday = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-daysFromMonday);
+    }
 
     private static string GetDayName(DateOnly date) => date.DayOfWeek switch
     {

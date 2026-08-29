@@ -28,7 +28,7 @@ else
         <div class="form-grid">
             <label>
                 Тип пошуку
-                <select @bind="targetType">
+                <select @bind="TargetType">
                     <option value="@ScheduleTargetType.Group">Група</option>
                     <option value="@ScheduleTargetType.Teacher">Викладач</option>
                     <option value="@ScheduleTargetType.Room">Аудиторія</option>
@@ -55,6 +55,14 @@ else
                 До дати
                 <input type="date" @bind="toDate" />
             </label>
+
+            <label class="checkbox-field">
+                <span>Вигляд</span>
+                <span class="checkbox-field__control">
+                    <input type="checkbox" @bind="weeklyView" />
+                    Показувати тижнями
+                </span>
+            </label>
         </div>
 
         <div class="search-actions">
@@ -68,6 +76,7 @@ else
         </div>
     </section>
 
+    <ErrorAlert Message="@validationMessage" />
     <ErrorAlert Message="@ScheduleState.ErrorMessage" />
 
     @if (ScheduleState.IsLoading)
@@ -76,7 +85,7 @@ else
     }
     else if (ScheduleState.Result is not null)
     {
-        <ScheduleResult Result="@ScheduleState.Result" />
+        <ScheduleResult Result="@ScheduleState.Result" WeeklyView="@weeklyView" />
     }
 }
 
@@ -85,6 +94,21 @@ else
     private string selectedObjectId = string.Empty;
     private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
     private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+    private bool weeklyView;
+    private string? validationMessage;
+
+    private ScheduleTargetType TargetType
+    {
+        get => targetType;
+        set
+        {
+            if (targetType == value) return;
+
+            targetType = value;
+            selectedObjectId = string.Empty;
+            validationMessage = null;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -111,7 +135,20 @@ else
 
     private async Task LoadScheduleAsync()
     {
-        if (string.IsNullOrWhiteSpace(selectedObjectId)) return;
+        validationMessage = null;
+
+        if (string.IsNullOrWhiteSpace(selectedObjectId))
+        {
+            validationMessage = "Оберіть групу, викладача або аудиторію.";
+            return;
+        }
+
+        if (fromDate > toDate)
+        {
+            validationMessage = "Дата початку не може бути пізнішою за дату завершення.";
+            return;
+        }
+
         await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
     }
 

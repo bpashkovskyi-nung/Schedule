@@ -11,7 +11,9 @@
         }
         else
         {
-            @foreach (LessonDto lesson in Lessons.OrderBy(x => x.LessonNumber, StringComparer.Ordinal))
+            @foreach (LessonDto lesson in Lessons
+                .OrderBy(x => x.LessonTime, StringComparer.Ordinal)
+                .ThenBy(x => x.LessonNumber, StringComparer.Ordinal))
             {
                 <LessonCard Lesson="lesson" />
             }

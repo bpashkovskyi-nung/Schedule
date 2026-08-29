@@ -2,8 +2,8 @@ using Dekanat.ScheduleSdk;
 using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Exceptions;
 using Dekanat.ScheduleSdk.Models;
-using Dekanat.ScheduleSdk.Options;
 using Dekanat.ScheduleSdk.Requests;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Schedule.Api.Configuration;
 using Schedule.Contracts.Common;
@@ -14,38 +14,70 @@ namespace Schedule.Api.Services;
 
 public sealed class ScheduleApiService(
     IPsRozkladClient client,
-    IOptions<ScheduleApiOptions> options) : IScheduleApiService
+    IOptions<ScheduleApiOptions> options,
+    IMemoryCache cache) : IScheduleApiService
 {
+    private const string ReferenceCacheKey = "schedule-api:reference-data";
+    private static readonly SemaphoreSlim ReferenceLock = new(1, 1);
     private readonly ScheduleApiOptions options = options.Value;
 
     public async Task<ReferenceDataResponse> GetReferenceDataAsync(CancellationToken cancellationToken = default)
     {
-        Task<PsRozkladExport> roomsTask = client.GetObjectListAsync(new ObjectListRequest
+        if (cache.TryGetValue(ReferenceCacheKey, out ReferenceDataResponse? cached) && cached is not null)
         {
-            Mode = RequestMode.Room,
-            IncludeIds = true,
-        }, cancellationToken);
+            return cached;
+        }
 
-        Task<PsRozkladExport> teachersTask = client.GetObjectListAsync(new ObjectListRequest
+        await ReferenceLock.WaitAsync(cancellationToken);
+        try
         {
-            Mode = RequestMode.Teacher,
-            IncludeIds = true,
-        }, cancellationToken);
+            if (cache.TryGetValue(ReferenceCacheKey, out cached) && cached is not null)
+            {
+                return cached;
+            }
 
-        Task<PsRozkladExport> groupsTask = client.GetObjectListAsync(new ObjectListRequest
+            Task<PsRozkladExport> roomsTask = client.GetObjectListAsync(new ObjectListRequest
+            {
+                Mode = RequestMode.Room,
+                IncludeIds = true,
+            }, cancellationToken);
+
+            Task<PsRozkladExport> teachersTask = client.GetObjectListAsync(new ObjectListRequest
+            {
+                Mode = RequestMode.Teacher,
+                IncludeIds = true,
+            }, cancellationToken);
+
+            Task<PsRozkladExport> groupsTask = client.GetObjectListAsync(new ObjectListRequest
+            {
+                Mode = RequestMode.Group,
+                IncludeIds = true,
+            }, cancellationToken);
+
+            await Task.WhenAll(roomsTask, teachersTask, groupsTask);
+
+            PsRozkladExport rooms = EnsureSuccessful(await roomsTask);
+            PsRozkladExport teachers = EnsureSuccessful(await teachersTask);
+            PsRozkladExport groups = EnsureSuccessful(await groupsTask);
+
+            ReferenceDataResponse referenceData = new()
+            {
+                Buildings = MapBuildings(rooms),
+                TeacherDepartments = MapDepartments(teachers),
+                GroupDepartments = MapDepartments(groups),
+            };
+
+            cache.Set(
+                ReferenceCacheKey,
+                referenceData,
+                TimeSpan.FromMinutes(Math.Max(1, options.ReferenceCacheMinutes)));
+
+            return referenceData;
+        }
+        finally
         {
-            Mode = RequestMode.Group,
-            IncludeIds = true,
-        }, cancellationToken);
-
-        await Task.WhenAll(roomsTask, teachersTask, groupsTask);
-
-        return new ReferenceDataResponse
-        {
-            Buildings = MapBuildings(await roomsTask),
-            TeacherDepartments = MapDepartments(await teachersTask),
-            GroupDepartments = MapDepartments(await groupsTask),
-        };
+            ReferenceLock.Release();
+        }
     }
 
     public async Task<PsRozkladExport> GetScheduleExportAsync(
@@ -104,7 +136,7 @@ public sealed class ScheduleApiService(
         string begin = from.ToString("dd.MM.yyyy");
         string end = to.ToString("dd.MM.yyyy");
 
-        return $"{PsRozkladClientOptions.DefaultBaseUrl}?req_type=rozklad&req_mode={mode}" +
+        return $"{options.TimetableBaseUrl}?req_type=rozklad&req_mode={mode}" +
                $"&OBJ_ID={Uri.EscapeDataString(objectId)}&OBJ_name=&dep_name=&ros_text=united" +
                $"&begin_date={begin}&end_date={end}&req_format=iCal&coding_mode=UTF8&bs=ok";
     }
@@ -116,6 +148,16 @@ public sealed class ScheduleApiService(
         ScheduleTargetType.Room => RequestMode.Room,
         _ => throw new ArgumentOutOfRangeException(nameof(targetType)),
     };
+
+    private static PsRozkladExport EnsureSuccessful(PsRozkladExport export)
+    {
+        if (!export.IsSuccess)
+        {
+            throw new PsRozkladApiException(export);
+        }
+
+        return export;
+    }
 
     private static IReadOnlyList<BuildingDto> MapBuildings(PsRozkladExport export) =>
         (export.Blocks ?? [])
