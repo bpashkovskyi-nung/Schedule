@@ -1,7 +1,10 @@
+using System.Threading.RateLimiting;
 using Dekanat.ScheduleSdk.DependencyInjection;
+using Microsoft.AspNetCore.RateLimiting;
 using Schedule.Api.Configuration;
 using Schedule.Api.Middleware;
 using Schedule.Api.Services;
+using Schedule.Contracts.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,10 +12,51 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.Configure<ScheduleApiOptions>(
     builder.Configuration.GetSection(ScheduleApiOptions.SectionName));
-builder.Services.AddPsRozkladClient();
+int externalTimeoutSeconds = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>($"{ScheduleApiOptions.SectionName}:ExternalRequestTimeoutSeconds") ?? 60);
+builder.Services.AddPsRozkladClient(options =>
+{
+    options.RequestTimeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
+});
 builder.Services.AddScoped<IScheduleApiService, ScheduleApiService>();
-builder.Services.AddHttpClient<ITimetableSuggestionsService, TimetableSuggestionsService>();
+builder.Services.AddTransient<TransientRetryHandler>();
+builder.Services.AddHttpClient<ITimetableSuggestionsService, TimetableSuggestionsService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
+}).AddHttpMessageHandler<TransientRetryHandler>();
 builder.Services.AddMemoryCache();
+
+int workloadPermitLimit = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>($"{ScheduleApiOptions.SectionName}:WorkloadPermitLimit") ?? 2);
+int workloadWindowSeconds = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>($"{ScheduleApiOptions.SectionName}:WorkloadWindowSeconds") ?? 30);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("workload", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown-client",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = workloadPermitLimit,
+            Window = TimeSpan.FromSeconds(workloadWindowSeconds),
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers.RetryAfter = workloadWindowSeconds.ToString();
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new ApiErrorResponse(
+                "rate_limit_exceeded",
+                "Забагато дорогих запитів. Повторіть спробу пізніше.",
+                context.HttpContext.TraceIdentifier),
+            cancellationToken);
+    };
+});
 
 builder.Services.AddCors(options =>
 {
@@ -30,12 +74,16 @@ var app = builder.Build();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (builder.Configuration.GetValue(
+        $"{ScheduleApiOptions.SectionName}:EnableOpenApi",
+        app.Environment.IsDevelopment()))
 {
     app.MapOpenApi();
 }
 
+app.UseRouting();
 app.UseCors("Web");
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));

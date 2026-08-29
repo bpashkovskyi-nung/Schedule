@@ -1,6 +1,8 @@
+using System.Net;
 using Dekanat.ScheduleSdk.Models;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Schedule.Api.Configuration;
 using Schedule.Api.Services;
@@ -92,5 +94,36 @@ public sealed class ScheduleCalculationsTests
         url.Should().Contain("req_mode=group");
         url.Should().Contain("OBJ_ID=group%2F1");
         url.Should().Contain("begin_date=24.08.2026");
+    }
+
+    [Fact]
+    public async Task TransientRetryHandler_RetriesTemporaryGetFailure()
+    {
+        int attempts = 0;
+        using TransientRetryHandler retryHandler = new(
+            Options.Create(new ScheduleApiOptions { ExternalRetryCount = 1 }),
+            NullLogger<TransientRetryHandler>.Instance)
+        {
+            InnerHandler = new StubHandler(() =>
+            {
+                attempts++;
+                return new HttpResponseMessage(
+                    attempts == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK);
+            }),
+        };
+        using HttpClient httpClient = new(retryHandler);
+
+        using HttpResponseMessage response = await httpClient.GetAsync("https://api.test.local/suggestions");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        attempts.Should().Be(2);
+    }
+
+    private sealed class StubHandler(Func<HttpResponseMessage> responseFactory) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(responseFactory());
     }
 }

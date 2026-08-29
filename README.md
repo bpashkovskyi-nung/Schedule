@@ -45,6 +45,7 @@ API після запуску доступний на `http://localhost:5274`.
 
 API кешує довідники на 10 хвилин і повертає помилки клієнтам у форматі
 `{ "code": "...", "message": "...", "traceId": "..." }`.
+Зовнішні запити мають timeout/retry policy, workload endpoint-и обмежені rate limit-ом, а OpenAPI доступний у Development або коли `ScheduleApi:EnableOpenApi=true`.
 
 ## Запуск нового Web-клієнта
 

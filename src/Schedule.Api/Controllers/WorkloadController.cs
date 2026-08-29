@@ -1,6 +1,7 @@
 using Dekanat.ScheduleSdk.Models;
 using Dekanat.ScheduleSdk.Exceptions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Schedule.Api.Configuration;
 using Schedule.Api.Services;
@@ -13,6 +14,7 @@ using Schedule.Contracts.Workload;
 namespace Schedule.Api.Controllers;
 
 [Route("api/v1/workload")]
+[EnableRateLimiting("workload")]
 public sealed class WorkloadController(
     IScheduleApiService scheduleService,
     IOptions<ScheduleApiOptions> options) : ApiControllerBase
