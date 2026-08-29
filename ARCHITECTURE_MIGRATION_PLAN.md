@@ -25,7 +25,7 @@
 - [x] Додано спільний typed HTTP client, state-сервіси та Razor UI для Web/Android.
 - [x] Додано кеш довідників API та єдиний формат помилок для клієнтів.
 - [x] Додано unit-тести API-розрахунків і HTTP-клієнта.
-- [x] Legacy MVC залишено ізольованим для безпечного переходу; він ще присутній у solution і буде видалений після приймання нових клієнтів.
+- [x] Legacy MVC залишено ізольованим у solution-папці `legacy` для безпечного переходу; його файли й тести ще будуть видалені після приймання нових клієнтів.
 - [ ] Додати production URL/API deployment settings, Android signing, notifications і platform-specific storage.
 - [ ] Перенести або видалити legacy MVC після перевірки нової Web/Android версії.
 

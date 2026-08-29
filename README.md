@@ -11,7 +11,7 @@
 - `src/Schedule.Web` — Blazor Web App з Interactive WebAssembly;
 - `src/Schedule.Mobile` — .NET MAUI Blazor Hybrid для Android.
 
-Старий `Schedule.Web` у корені рішення тимчасово зберігається як legacy MVC-клієнт на час міграції.
+Старий `Schedule.Web` у корені рішення тимчасово зберігається як legacy MVC-клієнт на час міграції та згрупований у solution-папці `legacy`.
 
 ## Рішення
 
