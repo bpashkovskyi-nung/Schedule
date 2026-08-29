@@ -37,11 +37,21 @@ else
 
             <label class="form-grid__wide">
                 Об’єкт
+                <input type="search" placeholder="Фільтр за назвою…" @bind="objectFilter" @bind:event="oninput" />
                 <select @bind="selectedObjectId">
                     <option value="">Оберіть об’єкт</option>
-                    @foreach (ScheduleEntityDto entity in CurrentEntities)
+                    @foreach (EntityGroup entityGroup in CurrentEntityGroups)
                     {
-                        <option value="@entity.Id">@GetEntityLabel(entity)</option>
+                        IReadOnlyList<ScheduleEntityDto> entities = GetFilteredEntities(entityGroup.Entities);
+                        if (entities.Count > 0)
+                        {
+                            <optgroup label="@entityGroup.Name">
+                                @foreach (ScheduleEntityDto entity in entities)
+                                {
+                                    <option value="@entity.Id">@GetEntityLabel(entity)</option>
+                                }
+                            </optgroup>
+                        }
                     }
                 </select>
             </label>
@@ -96,6 +106,7 @@ else
     private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
     private bool weeklyView;
     private string? validationMessage;
+    private string objectFilter = string.Empty;
 
     private ScheduleTargetType TargetType
     {
@@ -106,6 +117,7 @@ else
 
             targetType = value;
             selectedObjectId = string.Empty;
+            objectFilter = string.Empty;
             validationMessage = null;
         }
     }
@@ -115,7 +127,7 @@ else
         await ReferenceState.EnsureLoadedAsync(ApiClient);
     }
 
-    private IReadOnlyList<ScheduleEntityDto> CurrentEntities
+    private IReadOnlyList<EntityGroup> CurrentEntityGroups
     {
         get
         {
@@ -123,12 +135,22 @@ else
 
             return targetType switch
             {
-                ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments.SelectMany(x => x.Entities).ToList(),
-                ScheduleTargetType.Room => ReferenceState.Data.Buildings.SelectMany(x => x.Rooms).ToList(),
-                _ => ReferenceState.Data.GroupDepartments.SelectMany(x => x.Entities).ToList(),
+                ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments
+                    .Select(x => new EntityGroup(x.Name, x.Entities)).ToList(),
+                ScheduleTargetType.Room => ReferenceState.Data.Buildings
+                    .Select(x => new EntityGroup(x.Name, x.Rooms)).ToList(),
+                _ => ReferenceState.Data.GroupDepartments
+                    .Select(x => new EntityGroup(x.Name, x.Entities)).ToList(),
             };
         }
     }
+
+    private IReadOnlyList<ScheduleEntityDto> GetFilteredEntities(IReadOnlyList<ScheduleEntityDto> entities) =>
+        string.IsNullOrWhiteSpace(objectFilter)
+            ? entities
+            : entities
+                .Where(entity => GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
     private string GetEntityLabel(ScheduleEntityDto entity) =>
         targetType == ScheduleTargetType.Teacher ? entity.FullName : entity.Name;
@@ -154,4 +176,6 @@ else
 
     private string GetIcalUri() =>
         ApiClient.GetIcalUri(targetType, selectedObjectId, fromDate, toDate).ToString();
+
+    private sealed record EntityGroup(string Name, IReadOnlyList<ScheduleEntityDto> Entities);
 }

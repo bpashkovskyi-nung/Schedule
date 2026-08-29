@@ -26,7 +26,7 @@
 - [x] Додано кеш довідників API та єдиний формат помилок для клієнтів.
 - [x] Додано unit-тести API-розрахунків і HTTP-клієнта.
 - [x] Legacy MVC залишено ізольованим у solution-папці `legacy` для безпечного переходу; його файли й тести ще будуть видалені після приймання нових клієнтів.
-- [ ] Додати production URL/API deployment settings, Android signing, notifications і platform-specific storage.
+- [ ] Додати API deployment settings, Android signing, notifications і platform-specific storage. Production API URL для Web уже винесено в конфігурацію.
 - [ ] Перенести або видалити legacy MVC після перевірки нової Web/Android версії.
 
 ---

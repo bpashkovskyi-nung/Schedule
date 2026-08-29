@@ -56,6 +56,7 @@ dotnet run --project src/Schedule.Web/Schedule.Web
 
 Web-клієнт використовує `ApiBaseUrl` із `src/Schedule.Web/Schedule.Web/appsettings.Development.json`.
 Спільна сторінка розкладу підтримує список занять і тижневий вигляд.
+Для production за замовчуванням використовується `https://api.schedule.nung.edu.ua/`; локальний профіль Development перевизначає його на `http://localhost:5274/`.
 
 ## Запуск Android
 
