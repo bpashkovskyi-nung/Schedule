@@ -83,8 +83,8 @@ public sealed class HomeController(
     public async Task<IActionResult> Ical(
         string? mode,
         string? objectId,
-        DateOnly from,
-        DateOnly to,
+        DateOnly? from,
+        DateOnly? to,
         CancellationToken cancellationToken)
     {
         if (!featureOptions.Value.GenerateIcalFromJson)
@@ -94,22 +94,26 @@ public sealed class HomeController(
 
         if (!TryParseScheduleMode(mode, out RequestMode parsedMode) ||
             string.IsNullOrWhiteSpace(objectId) ||
-            from == default ||
-            to == default ||
-            from > to)
+            (from is null) != (to is null))
         {
             return BadRequest("Некоректні параметри iCal-запиту.");
         }
 
         string normalizedObjectId = objectId.Trim();
+        (DateOnly fromDate, DateOnly toDate) = ResolveIcalDates(from, to);
+
+        if (fromDate > toDate)
+        {
+            return BadRequest("Некоректний діапазон дат iCal-запиту.");
+        }
 
         try
         {
             PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
                 parsedMode,
                 normalizedObjectId,
-                from,
-                to,
+                fromDate,
+                toDate,
                 cancellationToken);
 
             byte[] calendar = icalGenerator.Generate(export, normalizedObjectId);
@@ -516,6 +520,18 @@ public sealed class HomeController(
         Apply(model.Groups);
         Apply(model.TeachingLoad);
         Apply(model.AuditoriumLoad);
+    }
+
+    private (DateOnly From, DateOnly To) ResolveIcalDates(DateOnly? from, DateOnly? to)
+    {
+        if (from is not null && to is not null)
+        {
+            return (from.Value, to.Value);
+        }
+
+        PeriodOptionVm currentTerm = periodOptions.GetPeriodOptions()
+            .First(option => option.Key == "current_term");
+        return (currentTerm.FromDate, currentTerm.ToDate);
     }
 
     private static bool TryParseScheduleMode(string? value, out RequestMode mode)

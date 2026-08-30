@@ -62,6 +62,7 @@ Web-клієнт використовує `ApiBaseUrl` із `src/Schedule.Web/Sc
 ## Тимчасовий legacy iCal
 
 Legacy MVC за замовчуванням бере розклад JSON через SDK і генерує `.ics` локально.
+Якщо дати не передані в URL календаря, використовується поточний семестр.
 Перемикач знаходиться в `Schedule.Web/appsettings.json`:
 
 ```json

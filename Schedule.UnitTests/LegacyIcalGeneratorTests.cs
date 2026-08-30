@@ -79,8 +79,8 @@ public sealed class LegacyIcalGeneratorTests
         url.Should().StartWith("/Home/Ical?");
         url.Should().Contain("mode=group");
         url.Should().Contain("objectId=%D0%93%D1%80%D1%83%D0%BF%D0%B0%20%D0%90%2F1");
-        url.Should().Contain("from=2026-08-24");
-        url.Should().Contain("to=2026-08-30");
+        url.Should().NotContain("from=");
+        url.Should().NotContain("to=");
     }
 
     [Fact]
