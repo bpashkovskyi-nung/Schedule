@@ -41,7 +41,8 @@ public sealed class ScheduleQueryService(
 
         if (featureOptions.Value.GenerateIcalFromJson)
         {
-            return $"/Home/Ical?mode={modeValue}&objectId={Uri.EscapeDataString(objectId)}";
+            return $"/Home/Ical?mode={modeValue}&objectId={Uri.EscapeDataString(objectId)}" +
+                   $"&from={beginDate:yyyy-MM-dd}&to={endDate:yyyy-MM-dd}";
         }
 
         return $"{PsRozkladClientOptions.DefaultBaseUrl}?req_type=rozklad&req_mode={modeValue}" +
