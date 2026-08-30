@@ -28,7 +28,7 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
         {
             ScheduleItem item = items[index];
             DateOnly? date = ScheduleDateExtensions.ParseApiDate(item.Date);
-            if (date is null)
+            if (date is null || string.IsNullOrWhiteSpace(item.LessonDescription))
             {
                 continue;
             }

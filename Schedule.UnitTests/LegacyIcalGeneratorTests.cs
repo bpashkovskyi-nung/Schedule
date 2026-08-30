@@ -64,6 +64,37 @@ public sealed class LegacyIcalGeneratorTests
     }
 
     [Fact]
+    public void Generate_should_skip_items_without_description()
+    {
+        PsRozkladExport export = new()
+        {
+            ScheduleItems =
+            [
+                new ScheduleItem
+                {
+                    Date = "24.08.2026",
+                    LessonNumber = "1",
+                    LessonTime = "08:00-09:20",
+                },
+                new ScheduleItem
+                {
+                    Date = "24.08.2026",
+                    LessonNumber = "2",
+                    LessonTime = "09:30-10:50",
+                    LessonDescription = "Програмування",
+                },
+            ],
+        };
+
+        string ical = Encoding.UTF8.GetString(new LegacyIcalGenerator().Generate(export, "Група"));
+
+        ical.Should().Contain("SUMMARY:Програмування\r\n");
+        ical.Should().NotContain("SUMMARY:Заняття\r\n");
+        ical.Should().Contain("BEGIN:VEVENT\r\n").And.Contain("END:VEVENT\r\n");
+        ical.Split("BEGIN:VEVENT\r\n").Length.Should().Be(2);
+    }
+
+    [Fact]
     public void BuildExportUrl_should_use_local_ical_endpoint_when_feature_is_enabled()
     {
         ScheduleQueryService service = new(
