@@ -3,10 +3,14 @@ using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Models;
 using Dekanat.ScheduleSdk.Options;
 using Dekanat.ScheduleSdk.Requests;
+using Microsoft.Extensions.Options;
+using Schedule.Web.Configuration;
 
 namespace Schedule.Web.Services;
 
-public sealed class ScheduleQueryService(IPsRozkladClient client) : IScheduleQueryService
+public sealed class ScheduleQueryService(
+    IPsRozkladClient client,
+    IOptions<LegacyFeatureOptions> featureOptions) : IScheduleQueryService
 {
     public Task<PsRozkladExport> GetScheduleAsync(
         RequestMode mode,
@@ -34,6 +38,12 @@ public sealed class ScheduleQueryService(IPsRozkladClient client) : IScheduleQue
             RequestMode.Room => "room",
             _ => "group",
         };
+
+        if (featureOptions.Value.GenerateIcalFromJson)
+        {
+            return $"/Home/Ical?mode={modeValue}&objectId={Uri.EscapeDataString(objectId)}" +
+                   $"&from={beginDate:yyyy-MM-dd}&to={endDate:yyyy-MM-dd}";
+        }
 
         return $"{PsRozkladClientOptions.DefaultBaseUrl}?req_type=rozklad&req_mode={modeValue}" +
                $"&OBJ_ID={Uri.EscapeDataString(objectId)}&OBJ_name=&dep_name=&ros_text=united" +

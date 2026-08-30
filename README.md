@@ -59,6 +59,19 @@ Web-клієнт використовує `ApiBaseUrl` із `src/Schedule.Web/Sc
 Спільна сторінка розкладу підтримує список занять і тижневий вигляд.
 Для production за замовчуванням використовується `https://api.schedule.nung.edu.ua/`; локальний профіль Development перевизначає його на `http://localhost:5274/`.
 
+## Тимчасовий legacy iCal
+
+Legacy MVC за замовчуванням бере розклад JSON через SDK і генерує `.ics` локально.
+Перемикач знаходиться в `Schedule.Web/appsettings.json`:
+
+```json
+"Features": {
+  "GenerateIcalFromJson": true
+}
+```
+
+Значення `false` повертає старий прямий iCal-запит до Dekanat.
+
 ## Запуск Android
 
 ```bash

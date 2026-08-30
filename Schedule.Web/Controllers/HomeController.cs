@@ -2,6 +2,8 @@ using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Exceptions;
 using Dekanat.ScheduleSdk.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Schedule.Web.Configuration;
 using Schedule.Web.Services;
 using Schedule.Web.ViewModels;
 
@@ -12,7 +14,9 @@ public sealed class HomeController(
     IScheduleQueryService scheduleQuery,
     ITimetableSuggestionsService suggestionsService,
     IAuditoriumLoadService auditoriumLoadService,
-    PeriodOptionsProvider periodOptions) : Controller
+    PeriodOptionsProvider periodOptions,
+    IOptions<LegacyFeatureOptions> featureOptions,
+    ILegacyIcalGenerator icalGenerator) : Controller
 {
     [HttpGet]
     public IActionResult Error() => View();
@@ -73,6 +77,49 @@ public sealed class HomeController(
         await PopulateUnifiedListsAsync(model, cancellationToken);
         ApplyDefaultDates(model);
         return View("Index", model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Ical(
+        string? mode,
+        string? objectId,
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken)
+    {
+        if (!featureOptions.Value.GenerateIcalFromJson)
+        {
+            return NotFound();
+        }
+
+        if (!TryParseScheduleMode(mode, out RequestMode parsedMode) ||
+            string.IsNullOrWhiteSpace(objectId) ||
+            from == default ||
+            to == default ||
+            from > to)
+        {
+            return BadRequest("Некоректні параметри iCal-запиту.");
+        }
+
+        string normalizedObjectId = objectId.Trim();
+
+        try
+        {
+            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
+                parsedMode,
+                normalizedObjectId,
+                from,
+                to,
+                cancellationToken);
+
+            byte[] calendar = icalGenerator.Generate(export, normalizedObjectId);
+            string fileName = $"{SanitizeFileName(normalizedObjectId)}.ics";
+            return File(calendar, "text/calendar; charset=utf-8", fileName);
+        }
+        catch (PsRozkladApiException exception)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, exception.ErrorMessage);
+        }
     }
 
     private async Task<IActionResult> SearchUnifiedAsync(
@@ -469,5 +516,37 @@ public sealed class HomeController(
         Apply(model.Groups);
         Apply(model.TeachingLoad);
         Apply(model.AuditoriumLoad);
+    }
+
+    private static bool TryParseScheduleMode(string? value, out RequestMode mode)
+    {
+        mode = value?.Trim().ToLowerInvariant() switch
+        {
+            "teacher" or "teachers" => RequestMode.Teacher,
+            "group" or "groups" => RequestMode.Group,
+            "room" or "rooms" or "auditorium" or "auditoriums" => RequestMode.Room,
+            _ => default,
+        };
+
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "teacher" or "teachers" or "group" or "groups" or
+            "room" or "rooms" or "auditorium" or "auditoriums" => true,
+            _ => false,
+        };
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        string fileName = string.Concat(value.Where(character =>
+            char.IsLetterOrDigit(character) || character is '-' or '_' or ' '));
+        fileName = fileName.Trim().Replace(' ', '_');
+
+        if (fileName.Length > 80)
+        {
+            fileName = fileName[..80];
+        }
+
+        return string.IsNullOrWhiteSpace(fileName) ? "schedule" : fileName;
     }
 }
