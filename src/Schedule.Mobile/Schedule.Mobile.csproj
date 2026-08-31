@@ -27,7 +27,7 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
         <!-- Display name -->
-        <ApplicationTitle>Schedule.Mobile</ApplicationTitle>
+        <ApplicationTitle>НУНГ Розклад</ApplicationTitle>
 
         <!-- App Identifier -->
         <ApplicationId>ua.edu.nung.schedule</ApplicationId>
@@ -51,7 +51,7 @@
         <ProjectReference Include="..\Schedule.Client.UI\Schedule.Client.UI.csproj" />
 
         <!-- App Icon -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#111D2D" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />

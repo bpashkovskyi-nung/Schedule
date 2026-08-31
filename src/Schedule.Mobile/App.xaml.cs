@@ -9,6 +9,6 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new MainPage()) { Title = "Schedule.Mobile" };
+		return new Window(new MainPage()) { Title = "НУНГ Розклад" };
 	}
 }
