@@ -13,7 +13,7 @@
 - Налаштування вибраного об’єкта, періоду та сповіщень зберігаються на пристрої.
 - Додано нову іконку календаря з розкладом.
 - Назву застосунку змінено на «НУНГ Розклад».
-- Android package id: `com.nung.schedule`.
+- Android package id: `com.schedule.nung`.
 - Production API: `https://api.schedule.ksm.if.ua/`.
 
 ### Виправлення
