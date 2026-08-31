@@ -1,5 +1,6 @@
 @page "/"
 @page "/settings"
+@using System.Globalization
 @using global::Schedule.Contracts.ReferenceData
 @using global::Schedule.Contracts.Schedules
 @inject IScheduleApiClient ApiClient
@@ -52,6 +53,22 @@
         </section>
 
         <section class="mobile-card">
+            <div class="mobile-section-label">Підрозділ</div>
+            <label class="mobile-field">
+                <span>@GetSubdivisionLabel(targetType)</span>
+                <select class="mobile-input mobile-select"
+                        value="@selectedSubdivisionName"
+                        @onchange="OnSubdivisionChanged">
+                    <option value="">Оберіть @GetSubdivisionLabel(targetType).ToLowerInvariant()</option>
+                    @foreach (SubdivisionOption subdivision in CurrentSubdivisions)
+                    {
+                        <option value="@subdivision.Name">@subdivision.Name</option>
+                    }
+                </select>
+            </label>
+        </section>
+
+        <section class="mobile-card">
             <div class="mobile-section-label">Об’єкт</div>
             <label class="mobile-field">
                 <span>Пошук</span>
@@ -59,19 +76,15 @@
             </label>
             <label class="mobile-field">
                 <span>@GetTargetLabel(targetType)</span>
-                <select class="mobile-input mobile-select" @bind="selectedObjectId">
+                <select class="mobile-input mobile-select"
+                        @bind="selectedObjectId"
+                        disabled="@string.IsNullOrWhiteSpace(selectedSubdivisionName)">
                     <option value="">Оберіть @GetTargetLabel(targetType).ToLowerInvariant()</option>
-                    @foreach (EntityGroup group in CurrentEntityGroups)
+                    @foreach (ScheduleEntityDto entity in CurrentEntities)
                     {
-                        IReadOnlyList<ScheduleEntityDto> entities = GetFilteredEntities(group.Entities);
-                        if (entities.Count > 0)
+                        if (MatchesFilter(entity))
                         {
-                            <optgroup label="@group.Name">
-                                @foreach (ScheduleEntityDto entity in entities)
-                                {
-                                    <option value="@entity.Id">@GetEntityLabel(entity)</option>
-                                }
-                            </optgroup>
+                            <option value="@entity.Id">@GetEntityLabel(entity)</option>
                         }
                     }
                 </select>
@@ -90,11 +103,25 @@
             <div class="mobile-date-grid">
                 <label class="mobile-field">
                     <span>Від</span>
-                    <input class="mobile-input" type="date" @bind="fromDate" />
+                    <input class="mobile-input mobile-date-input"
+                           type="text"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           maxlength="10"
+                           placeholder="dd.mm.yyyy"
+                           @bind="fromDateText"
+                           @bind:event="oninput" />
                 </label>
                 <label class="mobile-field">
                     <span>До</span>
-                    <input class="mobile-input" type="date" @bind="toDate" />
+                    <input class="mobile-input mobile-date-input"
+                           type="text"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           maxlength="10"
+                           placeholder="dd.mm.yyyy"
+                           @bind="toDateText"
+                           @bind:event="oninput" />
                 </label>
             </div>
             <div class="mobile-period-hint">Дані завантажуються лише для обраного періоду.</div>
@@ -130,9 +157,12 @@
 @code {
     private ScheduleTargetType targetType = ScheduleTargetType.Group;
     private string selectedObjectId = string.Empty;
+    private string selectedSubdivisionName = string.Empty;
     private string objectFilter = string.Empty;
     private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
     private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+    private string fromDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today));
+    private string toDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today.AddDays(6)));
     private string? validationMessage;
 
     protected override async Task OnInitializedAsync()
@@ -142,6 +172,10 @@
         fromDate = Selection.FromDate;
         toDate = Selection.ToDate;
         await ReferenceState.EnsureLoadedAsync(ApiClient);
+
+        fromDateText = FormatDate(fromDate);
+        toDateText = FormatDate(toDate);
+        selectedSubdivisionName = FindSubdivisionName(selectedObjectId);
     }
 
     private async Task ReloadReferenceDataAsync()
@@ -159,7 +193,15 @@
 
         targetType = value;
         selectedObjectId = string.Empty;
+        selectedSubdivisionName = string.Empty;
         objectFilter = string.Empty;
+        validationMessage = null;
+    }
+
+    private void OnSubdivisionChanged(ChangeEventArgs args)
+    {
+        selectedSubdivisionName = args.Value?.ToString() ?? string.Empty;
+        selectedObjectId = string.Empty;
         validationMessage = null;
     }
 
@@ -173,11 +215,23 @@
             return;
         }
 
-        if (fromDate > toDate)
+        if (!TryParseDate(fromDateText, out DateOnly parsedFromDate) ||
+            !TryParseDate(toDateText, out DateOnly parsedToDate))
+        {
+            validationMessage = "Введіть обидві дати у форматі dd.mm.yyyy.";
+            return;
+        }
+
+        if (parsedFromDate > parsedToDate)
         {
             validationMessage = "Дата початку не може бути пізнішою за дату завершення.";
             return;
         }
+
+        fromDate = parsedFromDate;
+        toDate = parsedToDate;
+        fromDateText = FormatDate(fromDate);
+        toDateText = FormatDate(toDate);
 
         Selection.TargetType = targetType;
         Selection.ObjectId = selectedObjectId;
@@ -192,7 +246,7 @@
         }
     }
 
-    private IReadOnlyList<EntityGroup> CurrentEntityGroups
+    private IReadOnlyList<SubdivisionOption> CurrentSubdivisions
     {
         get
         {
@@ -204,28 +258,32 @@
             return targetType switch
             {
                 ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments
-                    .Select(item => new EntityGroup(item.Name, item.Entities)).ToList(),
+                    .Select(item => new SubdivisionOption(item.Name, item.Entities)).ToList(),
                 ScheduleTargetType.Room => ReferenceState.Data.Buildings
-                    .Select(item => new EntityGroup(item.Name, item.Rooms)).ToList(),
+                    .Select(item => new SubdivisionOption(item.Name, item.Rooms)).ToList(),
                 _ => ReferenceState.Data.GroupDepartments
-                    .Select(item => new EntityGroup(item.Name, item.Entities)).ToList(),
+                    .Select(item => new SubdivisionOption(item.Name, item.Entities)).ToList(),
             };
         }
     }
 
-    private IReadOnlyList<ScheduleEntityDto> GetFilteredEntities(IReadOnlyList<ScheduleEntityDto> entities) =>
-        string.IsNullOrWhiteSpace(objectFilter)
-            ? entities
-            : entities
-                .Where(entity => GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+    private IReadOnlyList<ScheduleEntityDto> CurrentEntities =>
+        CurrentSubdivisions
+            .FirstOrDefault(item => item.Name == selectedSubdivisionName)?.Entities ?? [];
+
+    private bool MatchesFilter(ScheduleEntityDto entity) =>
+        string.IsNullOrWhiteSpace(objectFilter) ||
+        GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase);
 
     private string GetSelectedObjectName() =>
-        CurrentEntityGroups
-            .SelectMany(group => group.Entities)
+        CurrentEntities
             .Where(entity => entity.Id == selectedObjectId)
             .Select(GetEntityLabel)
             .FirstOrDefault() ?? selectedObjectId;
+
+    private string FindSubdivisionName(string objectId) =>
+        CurrentSubdivisions
+            .FirstOrDefault(item => item.Entities.Any(entity => entity.Id == objectId))?.Name ?? string.Empty;
 
     private string GetEntityLabel(ScheduleEntityDto entity) =>
         targetType == ScheduleTargetType.Teacher ? entity.FullName : entity.Name;
@@ -237,6 +295,13 @@
         _ => "Група",
     };
 
+    private static string GetSubdivisionLabel(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "Кафедра",
+        ScheduleTargetType.Room => "Корпус",
+        _ => "Факультет",
+    };
+
     private static string GetTargetIcon(ScheduleTargetType type) => type switch
     {
         ScheduleTargetType.Teacher => "Т",
@@ -244,5 +309,16 @@
         _ => "Г",
     };
 
-    private sealed record EntityGroup(string Name, IReadOnlyList<ScheduleEntityDto> Entities);
+    private static string FormatDate(DateOnly date) =>
+        date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+
+    private static bool TryParseDate(string value, out DateOnly date) =>
+        DateOnly.TryParseExact(
+            value,
+            "dd.MM.yyyy",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out date);
+
+    private sealed record SubdivisionOption(string Name, IReadOnlyList<ScheduleEntityDto> Entities);
 }

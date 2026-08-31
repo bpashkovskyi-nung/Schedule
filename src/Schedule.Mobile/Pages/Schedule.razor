@@ -90,11 +90,6 @@
                                 <div class="mobile-lesson-time">@FormatTime(lesson.LessonTime)</div>
                                 <div class="mobile-lesson-main">
                                     <h3>@GetLessonTitle(lesson)</h3>
-                                    @if (!string.IsNullOrWhiteSpace(lesson.LessonName) &&
-                                         !lesson.LessonName.Equals(GetLessonTitle(lesson), StringComparison.Ordinal))
-                                    {
-                                        <p>@lesson.LessonName</p>
-                                    }
                                     <div class="mobile-lesson-meta">
                                         @if (!string.IsNullOrWhiteSpace(lesson.Room))
                                         {
