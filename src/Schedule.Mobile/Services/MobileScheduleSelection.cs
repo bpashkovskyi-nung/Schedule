@@ -9,6 +9,7 @@ public sealed class MobileScheduleSelection
     public string ObjectName { get; set; } = string.Empty;
     public DateOnly FromDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public DateOnly ToDate { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+    public bool HidePastDates { get; set; }
 
     public bool HasSelection => !string.IsNullOrWhiteSpace(ObjectId);
 }

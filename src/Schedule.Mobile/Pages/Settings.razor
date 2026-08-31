@@ -142,6 +142,14 @@
                 </label>
             </div>
             <div class="mobile-period-hint">Дані завантажуються лише для обраного періоду.</div>
+            <label class="mobile-checkbox">
+                <input type="checkbox" @bind="hidePastDates" />
+                <span class="mobile-checkbox-mark" aria-hidden="true"></span>
+                <span class="mobile-checkbox-content">
+                    <strong>Приховувати минулі дати</strong>
+                    <span>Не показувати дні раніше сьогоднішньої дати.</span>
+                </span>
+            </label>
         </section>
 
         @if (!string.IsNullOrWhiteSpace(validationMessage))
@@ -181,6 +189,7 @@
     private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
     private string fromDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today));
     private string toDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today.AddDays(6)));
+    private bool hidePastDates;
     private string? validationMessage;
 
     protected override async Task OnInitializedAsync()
@@ -189,6 +198,7 @@
         selectedObjectId = Selection.ObjectId;
         fromDate = Selection.FromDate;
         toDate = Selection.ToDate;
+        hidePastDates = Selection.HidePastDates;
         await ReferenceState.EnsureLoadedAsync(ApiClient);
 
         fromDateText = FormatDate(fromDate);
@@ -285,6 +295,7 @@
         Selection.ObjectName = GetSelectedObjectName();
         Selection.FromDate = fromDate;
         Selection.ToDate = toDate;
+        Selection.HidePastDates = hidePastDates;
 
         await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
         if (ScheduleState.Result is not null)

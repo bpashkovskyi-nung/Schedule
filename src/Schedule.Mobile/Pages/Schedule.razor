@@ -149,15 +149,17 @@
 
     private void OpenSettings() => Navigation.NavigateTo("/settings");
 
-    private static bool HasLessons(ScheduleResponse response) =>
-        response.Lessons.Any(lesson =>
-            lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription));
+    private bool HasLessons(ScheduleResponse response) => GetVisibleLessons(response).Any();
 
-    private static IEnumerable<IGrouping<DateOnly, LessonDto>> GetDays(ScheduleResponse response) =>
-        response.Lessons
-            .Where(lesson => lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription))
+    private IEnumerable<IGrouping<DateOnly, LessonDto>> GetDays(ScheduleResponse response) =>
+        GetVisibleLessons(response)
             .GroupBy(lesson => lesson.Date!.Value)
             .OrderBy(group => group.Key);
+
+    private IEnumerable<LessonDto> GetVisibleLessons(ScheduleResponse response) =>
+        response.Lessons
+            .Where(lesson => lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription))
+            .Where(lesson => !Selection.HidePastDates || lesson.Date!.Value >= DateOnly.FromDateTime(DateTime.Today));
 
     private static string GetLessonTitle(LessonDto lesson) =>
         FirstNonEmpty(lesson.LessonDescription, lesson.Title, lesson.LessonName, "Заняття");
