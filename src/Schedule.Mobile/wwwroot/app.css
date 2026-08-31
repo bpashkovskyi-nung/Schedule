@@ -180,7 +180,10 @@ a {
     padding: 1.35rem 1rem 1.5rem;
 }
 
-.mobile-page-heading,
+.mobile-page-heading {
+    margin-bottom: 1.25rem;
+}
+
 .mobile-schedule-heading {
     display: flex;
     align-items: flex-start;
