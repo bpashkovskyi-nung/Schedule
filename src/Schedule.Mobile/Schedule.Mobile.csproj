@@ -30,7 +30,7 @@
         <ApplicationTitle>НУНГ Розклад</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>ua.edu.nung.schedule</ApplicationId>
+        <ApplicationId>com.nung.schedule</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
