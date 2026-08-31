@@ -54,41 +54,75 @@
 
         <section class="mobile-card">
             <div class="mobile-section-label">Підрозділ</div>
-            <label class="mobile-field">
+            <div class="mobile-field">
                 <span>@GetSubdivisionLabel(targetType)</span>
-                <select class="mobile-input mobile-select"
-                        value="@selectedSubdivisionName"
-                        @onchange="OnSubdivisionChanged">
-                    <option value="">Оберіть @GetSubdivisionLabel(targetType).ToLowerInvariant()</option>
-                    @foreach (SubdivisionOption subdivision in CurrentSubdivisions)
+                <div class="mobile-select-container">
+                    <button class="mobile-input mobile-select-trigger @(string.IsNullOrWhiteSpace(selectedSubdivisionName) ? "is-placeholder" : string.Empty)"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="@subdivisionMenuOpen"
+                            @onclick="ToggleSubdivisionMenu">
+                        <span>@GetSubdivisionSelectionLabel()</span>
+                        <span class="mobile-select-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    @if (subdivisionMenuOpen)
                     {
-                        <option value="@subdivision.Name">@subdivision.Name</option>
+                        <div class="mobile-select-menu" role="listbox" aria-label="@GetSubdivisionLabel(targetType)">
+                            @foreach (SubdivisionOption subdivision in CurrentSubdivisions)
+                            {
+                                <button class="mobile-select-option @(selectedSubdivisionName == subdivision.Name ? "is-selected" : string.Empty)"
+                                        type="button"
+                                        role="option"
+                                        aria-selected="@(selectedSubdivisionName == subdivision.Name)"
+                                        @onclick="() => SelectSubdivision(subdivision.Name)">
+                                    @subdivision.Name
+                                </button>
+                            }
+                        </div>
                     }
-                </select>
-            </label>
+                </div>
+            </div>
         </section>
 
         <section class="mobile-card">
             <div class="mobile-section-label">Об’єкт</div>
-            <label class="mobile-field">
+            <div class="mobile-field">
                 <span>Пошук</span>
                 <input class="mobile-input" type="search" placeholder="Фільтр за назвою…" @bind="objectFilter" @bind:event="oninput" />
-            </label>
-            <label class="mobile-field">
+            </div>
+            <div class="mobile-field">
                 <span>@GetTargetLabel(targetType)</span>
-                <select class="mobile-input mobile-select"
-                        @bind="selectedObjectId"
-                        disabled="@string.IsNullOrWhiteSpace(selectedSubdivisionName)">
-                    <option value="">Оберіть @GetTargetLabel(targetType).ToLowerInvariant()</option>
-                    @foreach (ScheduleEntityDto entity in CurrentEntities)
+                <div class="mobile-select-container">
+                    <button class="mobile-input mobile-select-trigger @(string.IsNullOrWhiteSpace(selectedObjectId) ? "is-placeholder" : string.Empty)"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="@objectMenuOpen"
+                            disabled="@string.IsNullOrWhiteSpace(selectedSubdivisionName)"
+                            @onclick="ToggleObjectMenu">
+                        <span>@GetObjectSelectionLabel()</span>
+                        <span class="mobile-select-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    @if (objectMenuOpen)
                     {
-                        if (MatchesFilter(entity))
-                        {
-                            <option value="@entity.Id">@GetEntityLabel(entity)</option>
-                        }
+                        <div class="mobile-select-menu" role="listbox" aria-label="@GetTargetLabel(targetType)">
+                            @foreach (ScheduleEntityDto entity in CurrentEntities.Where(MatchesFilter))
+                            {
+                                <button class="mobile-select-option @(selectedObjectId == entity.Id ? "is-selected" : string.Empty)"
+                                        type="button"
+                                        role="option"
+                                        aria-selected="@(selectedObjectId == entity.Id)"
+                                        @onclick="() => SelectObject(entity.Id)">
+                                    @GetEntityLabel(entity)
+                                </button>
+                            }
+                            @if (!CurrentEntities.Any(MatchesFilter))
+                            {
+                                <div class="mobile-select-empty">Нічого не знайдено</div>
+                            }
+                        </div>
                     }
-                </select>
-            </label>
+                </div>
+            </div>
             @if (!string.IsNullOrWhiteSpace(selectedObjectId))
             {
                 <div class="mobile-selection-pill">
@@ -159,6 +193,8 @@
     private string selectedObjectId = string.Empty;
     private string selectedSubdivisionName = string.Empty;
     private string objectFilter = string.Empty;
+    private bool subdivisionMenuOpen;
+    private bool objectMenuOpen;
     private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
     private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
     private string fromDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today));
@@ -195,13 +231,42 @@
         selectedObjectId = string.Empty;
         selectedSubdivisionName = string.Empty;
         objectFilter = string.Empty;
+        subdivisionMenuOpen = false;
+        objectMenuOpen = false;
         validationMessage = null;
     }
 
-    private void OnSubdivisionChanged(ChangeEventArgs args)
+    private void ToggleSubdivisionMenu()
     {
-        selectedSubdivisionName = args.Value?.ToString() ?? string.Empty;
+        subdivisionMenuOpen = !subdivisionMenuOpen;
+        objectMenuOpen = false;
+    }
+
+    private void SelectSubdivision(string value)
+    {
+        selectedSubdivisionName = value;
         selectedObjectId = string.Empty;
+        objectFilter = string.Empty;
+        subdivisionMenuOpen = false;
+        objectMenuOpen = false;
+        validationMessage = null;
+    }
+
+    private void ToggleObjectMenu()
+    {
+        if (string.IsNullOrWhiteSpace(selectedSubdivisionName))
+        {
+            return;
+        }
+
+        objectMenuOpen = !objectMenuOpen;
+        subdivisionMenuOpen = false;
+    }
+
+    private void SelectObject(string value)
+    {
+        selectedObjectId = value;
+        objectMenuOpen = false;
         validationMessage = null;
     }
 
@@ -211,7 +276,7 @@
 
         if (string.IsNullOrWhiteSpace(selectedObjectId))
         {
-            validationMessage = $"Оберіть {GetTargetLabel(targetType).ToLowerInvariant()}.";
+            validationMessage = $"Оберіть {GetTargetPromptLabel(targetType)}.";
             return;
         }
 
@@ -232,6 +297,8 @@
         toDate = parsedToDate;
         fromDateText = FormatDate(fromDate);
         toDateText = FormatDate(toDate);
+        subdivisionMenuOpen = false;
+        objectMenuOpen = false;
 
         Selection.TargetType = targetType;
         Selection.ObjectId = selectedObjectId;
@@ -281,6 +348,16 @@
             .Select(GetEntityLabel)
             .FirstOrDefault() ?? selectedObjectId;
 
+    private string GetSubdivisionSelectionLabel() =>
+        string.IsNullOrWhiteSpace(selectedSubdivisionName)
+            ? $"Оберіть {GetSubdivisionPromptLabel(targetType)}"
+            : selectedSubdivisionName;
+
+    private string GetObjectSelectionLabel() =>
+        string.IsNullOrWhiteSpace(selectedObjectId)
+            ? $"Оберіть {GetTargetPromptLabel(targetType)}"
+            : GetSelectedObjectName();
+
     private string FindSubdivisionName(string objectId) =>
         CurrentSubdivisions
             .FirstOrDefault(item => item.Entities.Any(entity => entity.Id == objectId))?.Name ?? string.Empty;
@@ -300,6 +377,20 @@
         ScheduleTargetType.Teacher => "Кафедра",
         ScheduleTargetType.Room => "Корпус",
         _ => "Факультет",
+    };
+
+    private static string GetSubdivisionPromptLabel(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "кафедру",
+        ScheduleTargetType.Room => "корпус",
+        _ => "факультет",
+    };
+
+    private static string GetTargetPromptLabel(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "викладача",
+        ScheduleTargetType.Room => "аудиторію",
+        _ => "групу",
     };
 
     private static string GetTargetIcon(ScheduleTargetType type) => type switch
