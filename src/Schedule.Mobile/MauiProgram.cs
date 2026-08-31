@@ -17,13 +17,11 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddSingleton<MobileScheduleSelection>();
-#if DEBUG
-        // 10.0.2.2 points to the Windows host from the Android emulator.
-        builder.Services.AddScheduleClientCore(new Uri("http://10.0.2.2:5274/"));
-#else
-        builder.Services.AddScheduleClientCore(new Uri("https://api.schedule.ksm.if.ua/"));
-#endif
+        builder.Services.AddSingleton<MobileScheduleSettingsStore>();
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<MobileScheduleSettingsStore>().Load());
+        builder.Services.AddSingleton<MobileNotificationScheduler>();
+        // 10.0.2.2 points to the Windows host from the Android emulator in Debug.
+        builder.Services.AddScheduleClientCore(MobileApiConfiguration.BaseUri);
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

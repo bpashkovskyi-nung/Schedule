@@ -7,6 +7,8 @@
 @inject ReferenceDataState ReferenceState
 @inject ScheduleState ScheduleState
 @inject MobileScheduleSelection Selection
+@inject MobileScheduleSettingsStore SettingsStore
+@inject MobileNotificationScheduler NotificationScheduler
 @inject NavigationManager Navigation
 
 <PageTitle>Налаштування</PageTitle>
@@ -150,6 +152,14 @@
                     <span>Не показувати дні раніше сьогоднішньої дати.</span>
                 </span>
             </label>
+            <label class="mobile-checkbox">
+                <input type="checkbox" @bind="notifyAboutNewLessons" />
+                <span class="mobile-checkbox-mark" aria-hidden="true"></span>
+                <span class="mobile-checkbox-content">
+                    <strong>Отримувати сповіщення про нові пари</strong>
+                    <span>Перевіряти розклад раз на годину.</span>
+                </span>
+            </label>
         </section>
 
         @if (!string.IsNullOrWhiteSpace(validationMessage))
@@ -190,6 +200,7 @@
     private string fromDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today));
     private string toDateText = FormatDate(DateOnly.FromDateTime(DateTime.Today.AddDays(6)));
     private bool hidePastDates;
+    private bool notifyAboutNewLessons;
     private string? validationMessage;
 
     protected override async Task OnInitializedAsync()
@@ -199,6 +210,7 @@
         fromDate = Selection.FromDate;
         toDate = Selection.ToDate;
         hidePastDates = Selection.HidePastDates;
+        notifyAboutNewLessons = Selection.NotifyAboutNewLessons;
         await ReferenceState.EnsureLoadedAsync(ApiClient);
 
         fromDateText = FormatDate(fromDate);
@@ -296,6 +308,16 @@
         Selection.FromDate = fromDate;
         Selection.ToDate = toDate;
         Selection.HidePastDates = hidePastDates;
+        Selection.NotifyAboutNewLessons = notifyAboutNewLessons;
+        SettingsStore.Save(Selection);
+        if (notifyAboutNewLessons)
+        {
+            NotificationScheduler.Enable();
+        }
+        else
+        {
+            NotificationScheduler.Disable();
+        }
 
         await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
         if (ScheduleState.Result is not null)
