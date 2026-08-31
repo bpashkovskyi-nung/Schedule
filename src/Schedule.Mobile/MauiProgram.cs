@@ -22,7 +22,7 @@ public static class MauiProgram
         // 10.0.2.2 points to the Windows host from the Android emulator.
         builder.Services.AddScheduleClientCore(new Uri("http://10.0.2.2:5274/"));
 #else
-        builder.Services.AddScheduleClientCore(new Uri("https://api.schedule.nung.edu.ua/"));
+        builder.Services.AddScheduleClientCore(new Uri("https://api.schedule.ksm.if.ua/"));
 #endif
 
 #if DEBUG

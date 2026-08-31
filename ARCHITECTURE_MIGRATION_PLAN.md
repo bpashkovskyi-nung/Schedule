@@ -788,7 +788,7 @@ Schedule.Api
 Рекомендовані адреси:
 
 ```text
-https://api.schedule.nung.edu.ua
+https://api.schedule.ksm.if.ua
 https://schedule.nung.edu.ua
 ```
 
