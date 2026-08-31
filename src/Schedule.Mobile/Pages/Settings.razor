@@ -1,0 +1,248 @@
+@page "/"
+@page "/settings"
+@using global::Schedule.Contracts.ReferenceData
+@using global::Schedule.Contracts.Schedules
+@inject IScheduleApiClient ApiClient
+@inject ReferenceDataState ReferenceState
+@inject ScheduleState ScheduleState
+@inject MobileScheduleSelection Selection
+@inject NavigationManager Navigation
+
+<PageTitle>Налаштування</PageTitle>
+
+<section class="mobile-page mobile-settings-page">
+    <div class="mobile-page-heading">
+        <p class="mobile-eyebrow">Персоналізація</p>
+        <h1>Налаштування</h1>
+        <p>Оберіть, чий розклад потрібно показувати.</p>
+    </div>
+
+    @if (ReferenceState.IsLoading)
+    {
+        <div class="mobile-loading">
+            <span class="mobile-spinner" aria-hidden="true"></span>
+            <span>Завантаження довідників…</span>
+        </div>
+    }
+    else if (ReferenceState.Data is null)
+    {
+        <section class="mobile-error-card">
+            <strong>Не вдалося завантажити довідники</strong>
+            <p>@(ReferenceState.ErrorMessage ?? "Перевірте з’єднання з API та спробуйте ще раз.")</p>
+            <button class="mobile-button mobile-button--quiet" type="button" @onclick="ReloadReferenceDataAsync">
+                Спробувати ще раз
+            </button>
+        </section>
+    }
+    else
+    {
+        <section class="mobile-card mobile-card--accent">
+            <div class="mobile-section-label">Тип розкладу</div>
+            <div class="mobile-choice-grid" role="group" aria-label="Тип розкладу">
+                @foreach (ScheduleTargetType type in Enum.GetValues<ScheduleTargetType>())
+                {
+                    <button class="mobile-choice @(targetType == type ? "is-selected" : string.Empty)"
+                            type="button"
+                            @onclick="() => SetTargetType(type)">
+                        <span class="mobile-choice-icon">@GetTargetIcon(type)</span>
+                        <span>@GetTargetLabel(type)</span>
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section class="mobile-card">
+            <div class="mobile-section-label">Об’єкт</div>
+            <label class="mobile-field">
+                <span>Пошук</span>
+                <input class="mobile-input" type="search" placeholder="Фільтр за назвою…" @bind="objectFilter" @bind:event="oninput" />
+            </label>
+            <label class="mobile-field">
+                <span>@GetTargetLabel(targetType)</span>
+                <select class="mobile-input mobile-select" @bind="selectedObjectId">
+                    <option value="">Оберіть @GetTargetLabel(targetType).ToLowerInvariant()</option>
+                    @foreach (EntityGroup group in CurrentEntityGroups)
+                    {
+                        IReadOnlyList<ScheduleEntityDto> entities = GetFilteredEntities(group.Entities);
+                        if (entities.Count > 0)
+                        {
+                            <optgroup label="@group.Name">
+                                @foreach (ScheduleEntityDto entity in entities)
+                                {
+                                    <option value="@entity.Id">@GetEntityLabel(entity)</option>
+                                }
+                            </optgroup>
+                        }
+                    }
+                </select>
+            </label>
+            @if (!string.IsNullOrWhiteSpace(selectedObjectId))
+            {
+                <div class="mobile-selection-pill">
+                    <span class="mobile-selection-dot"></span>
+                    @GetSelectedObjectName()
+                </div>
+            }
+        </section>
+
+        <section class="mobile-card">
+            <div class="mobile-section-label">Період</div>
+            <div class="mobile-date-grid">
+                <label class="mobile-field">
+                    <span>Від</span>
+                    <input class="mobile-input" type="date" @bind="fromDate" />
+                </label>
+                <label class="mobile-field">
+                    <span>До</span>
+                    <input class="mobile-input" type="date" @bind="toDate" />
+                </label>
+            </div>
+            <div class="mobile-period-hint">Дані завантажуються лише для обраного періоду.</div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            <div class="mobile-inline-error" role="alert">@validationMessage</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(ScheduleState.ErrorMessage))
+        {
+            <div class="mobile-inline-error" role="alert">@ScheduleState.ErrorMessage</div>
+        }
+
+        <button class="mobile-button mobile-button--primary mobile-button--wide"
+                type="button"
+                @onclick="OpenScheduleAsync"
+                disabled="@ScheduleState.IsLoading">
+            @if (ScheduleState.IsLoading)
+            {
+                <span class="mobile-spinner mobile-spinner--light" aria-hidden="true"></span>
+                <span>Завантаження…</span>
+            }
+            else
+            {
+                <span>Показати розклад</span>
+                <span class="mobile-button-arrow" aria-hidden="true">→</span>
+            }
+        </button>
+    }
+</section>
+
+@code {
+    private ScheduleTargetType targetType = ScheduleTargetType.Group;
+    private string selectedObjectId = string.Empty;
+    private string objectFilter = string.Empty;
+    private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
+    private string? validationMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        targetType = Selection.TargetType;
+        selectedObjectId = Selection.ObjectId;
+        fromDate = Selection.FromDate;
+        toDate = Selection.ToDate;
+        await ReferenceState.EnsureLoadedAsync(ApiClient);
+    }
+
+    private async Task ReloadReferenceDataAsync()
+    {
+        validationMessage = null;
+        await ReferenceState.EnsureLoadedAsync(ApiClient);
+    }
+
+    private void SetTargetType(ScheduleTargetType value)
+    {
+        if (targetType == value)
+        {
+            return;
+        }
+
+        targetType = value;
+        selectedObjectId = string.Empty;
+        objectFilter = string.Empty;
+        validationMessage = null;
+    }
+
+    private async Task OpenScheduleAsync()
+    {
+        validationMessage = null;
+
+        if (string.IsNullOrWhiteSpace(selectedObjectId))
+        {
+            validationMessage = $"Оберіть {GetTargetLabel(targetType).ToLowerInvariant()}.";
+            return;
+        }
+
+        if (fromDate > toDate)
+        {
+            validationMessage = "Дата початку не може бути пізнішою за дату завершення.";
+            return;
+        }
+
+        Selection.TargetType = targetType;
+        Selection.ObjectId = selectedObjectId;
+        Selection.ObjectName = GetSelectedObjectName();
+        Selection.FromDate = fromDate;
+        Selection.ToDate = toDate;
+
+        await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
+        if (ScheduleState.Result is not null)
+        {
+            Navigation.NavigateTo("/schedule");
+        }
+    }
+
+    private IReadOnlyList<EntityGroup> CurrentEntityGroups
+    {
+        get
+        {
+            if (ReferenceState.Data is null)
+            {
+                return [];
+            }
+
+            return targetType switch
+            {
+                ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments
+                    .Select(item => new EntityGroup(item.Name, item.Entities)).ToList(),
+                ScheduleTargetType.Room => ReferenceState.Data.Buildings
+                    .Select(item => new EntityGroup(item.Name, item.Rooms)).ToList(),
+                _ => ReferenceState.Data.GroupDepartments
+                    .Select(item => new EntityGroup(item.Name, item.Entities)).ToList(),
+            };
+        }
+    }
+
+    private IReadOnlyList<ScheduleEntityDto> GetFilteredEntities(IReadOnlyList<ScheduleEntityDto> entities) =>
+        string.IsNullOrWhiteSpace(objectFilter)
+            ? entities
+            : entities
+                .Where(entity => GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    private string GetSelectedObjectName() =>
+        CurrentEntityGroups
+            .SelectMany(group => group.Entities)
+            .Where(entity => entity.Id == selectedObjectId)
+            .Select(GetEntityLabel)
+            .FirstOrDefault() ?? selectedObjectId;
+
+    private string GetEntityLabel(ScheduleEntityDto entity) =>
+        targetType == ScheduleTargetType.Teacher ? entity.FullName : entity.Name;
+
+    private static string GetTargetLabel(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "Викладач",
+        ScheduleTargetType.Room => "Аудиторія",
+        _ => "Група",
+    };
+
+    private static string GetTargetIcon(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "Т",
+        ScheduleTargetType.Room => "А",
+        _ => "Г",
+    };
+
+    private sealed record EntityGroup(string Name, IReadOnlyList<ScheduleEntityDto> Entities);
+}

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Schedule.Client.Core.Services;
+using Schedule.Mobile.Services;
 
 namespace Schedule.Mobile;
 
@@ -16,6 +17,7 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddSingleton<MobileScheduleSelection>();
 #if DEBUG
         // 10.0.2.2 points to the Windows host from the Android emulator.
         builder.Services.AddScheduleClientCore(new Uri("http://10.0.2.2:5274/"));

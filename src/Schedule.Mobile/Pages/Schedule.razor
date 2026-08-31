@@ -1,0 +1,195 @@
+@page "/schedule"
+@using System.Globalization
+@using global::Schedule.Contracts.Schedules
+@inject IScheduleApiClient ApiClient
+@inject ScheduleState ScheduleState
+@inject MobileScheduleSelection Selection
+@inject NavigationManager Navigation
+
+<PageTitle>Розклад</PageTitle>
+
+<section class="mobile-page mobile-schedule-page">
+    <div class="mobile-schedule-heading">
+        <div>
+            <p class="mobile-eyebrow">Мій розклад</p>
+            <h1>Розклад</h1>
+            @if (Selection.HasSelection)
+            {
+                <p class="mobile-schedule-subtitle">@GetTargetLabel(Selection.TargetType): @Selection.ObjectName</p>
+            }
+        </div>
+        <button class="mobile-icon-button" type="button" title="Налаштування" @onclick="OpenSettings">
+            <span aria-hidden="true">⚙</span>
+        </button>
+    </div>
+
+    @if (!Selection.HasSelection)
+    {
+        <section class="mobile-empty-state">
+            <div class="mobile-empty-icon">⌁</div>
+            <h2>Налаштуйте свій розклад</h2>
+            <p>Оберіть групу, викладача або аудиторію та період.</p>
+            <button class="mobile-button mobile-button--primary" type="button" @onclick="OpenSettings">
+                Відкрити налаштування
+            </button>
+        </section>
+    }
+    else if (ScheduleState.IsLoading)
+    {
+        <div class="mobile-loading mobile-loading--centered">
+            <span class="mobile-spinner" aria-hidden="true"></span>
+            <span>Завантаження розкладу…</span>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(ScheduleState.ErrorMessage))
+    {
+        <section class="mobile-error-card">
+            <strong>Не вдалося завантажити розклад</strong>
+            <p>@ScheduleState.ErrorMessage</p>
+            <button class="mobile-button mobile-button--quiet" type="button" @onclick="RefreshAsync">
+                Повторити
+            </button>
+        </section>
+    }
+    else if (ScheduleState.Result is null || !HasLessons(ScheduleState.Result))
+    {
+        <section class="mobile-empty-state">
+            <div class="mobile-empty-icon">✓</div>
+            <h2>Занять немає</h2>
+            <p>На обраний період розклад порожній.</p>
+            <button class="mobile-button mobile-button--quiet" type="button" @onclick="OpenSettings">
+                Змінити період
+            </button>
+        </section>
+    }
+    else
+    {
+        <div class="mobile-period-bar">
+            <span>@Selection.FromDate.ToString("dd.MM.yyyy") — @Selection.ToDate.ToString("dd.MM.yyyy")</span>
+            <button type="button" @onclick="RefreshAsync" disabled="@ScheduleState.IsLoading">Оновити</button>
+        </div>
+
+        <div class="mobile-days-list">
+            @foreach (IGrouping<DateOnly, LessonDto> day in GetDays(ScheduleState.Result))
+            {
+                <section class="mobile-day-section">
+                    <header class="mobile-day-header">
+                        <div>
+                            <h2>@GetDayName(day.Key)</h2>
+                            <span>@day.Key.ToString("dd.MM.yyyy")</span>
+                        </div>
+                        <span class="mobile-day-count">@day.Count()</span>
+                    </header>
+
+                    <div class="mobile-lesson-list">
+                        @foreach (LessonDto lesson in day
+                            .OrderBy(item => item.LessonTime, StringComparer.Ordinal)
+                            .ThenBy(item => item.LessonNumber, StringComparer.Ordinal))
+                        {
+                            <article class="mobile-lesson-card">
+                                <div class="mobile-lesson-time">@FormatTime(lesson.LessonTime)</div>
+                                <div class="mobile-lesson-main">
+                                    <h3>@GetLessonTitle(lesson)</h3>
+                                    @if (!string.IsNullOrWhiteSpace(lesson.LessonName) &&
+                                         !lesson.LessonName.Equals(GetLessonTitle(lesson), StringComparison.Ordinal))
+                                    {
+                                        <p>@lesson.LessonName</p>
+                                    }
+                                    <div class="mobile-lesson-meta">
+                                        @if (!string.IsNullOrWhiteSpace(lesson.Room))
+                                        {
+                                            <span>Ауд. @lesson.Room</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(lesson.Teacher))
+                                        {
+                                            <span>@lesson.Teacher</span>
+                                        }
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(lesson.LessonNumber))
+                                {
+                                    <span class="mobile-lesson-number">@lesson.LessonNumber</span>
+                                }
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (Selection.HasSelection && NeedsRefresh())
+        {
+            await RefreshAsync();
+        }
+    }
+
+    private bool NeedsRefresh()
+    {
+        ScheduleResponse? result = ScheduleState.Result;
+        return result is null ||
+               result.TargetType != Selection.TargetType ||
+               result.ObjectId != Selection.ObjectId ||
+               result.Period.From != Selection.FromDate ||
+               result.Period.To != Selection.ToDate;
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!Selection.HasSelection)
+        {
+            return;
+        }
+
+        await ScheduleState.LoadAsync(
+            ApiClient,
+            Selection.TargetType,
+            Selection.ObjectId,
+            Selection.FromDate,
+            Selection.ToDate);
+    }
+
+    private void OpenSettings() => Navigation.NavigateTo("/settings");
+
+    private static bool HasLessons(ScheduleResponse response) =>
+        response.Lessons.Any(lesson =>
+            lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription));
+
+    private static IEnumerable<IGrouping<DateOnly, LessonDto>> GetDays(ScheduleResponse response) =>
+        response.Lessons
+            .Where(lesson => lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription))
+            .GroupBy(lesson => lesson.Date!.Value)
+            .OrderBy(group => group.Key);
+
+    private static string GetLessonTitle(LessonDto lesson) =>
+        FirstNonEmpty(lesson.LessonDescription, lesson.Title, lesson.LessonName, "Заняття");
+
+    private static string FirstNonEmpty(params string[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? "Заняття";
+
+    private static string FormatTime(string value) =>
+        string.IsNullOrWhiteSpace(value) ? "Час не вказано" : value.Replace('-', '–');
+
+    private static string GetTargetLabel(ScheduleTargetType type) => type switch
+    {
+        ScheduleTargetType.Teacher => "Викладач",
+        ScheduleTargetType.Room => "Аудиторія",
+        _ => "Група",
+    };
+
+    private static string GetDayName(DateOnly date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Monday => "Понеділок",
+        DayOfWeek.Tuesday => "Вівторок",
+        DayOfWeek.Wednesday => "Середа",
+        DayOfWeek.Thursday => "Четвер",
+        DayOfWeek.Friday => "П’ятниця",
+        DayOfWeek.Saturday => "Субота",
+        DayOfWeek.Sunday => "Неділя",
+        _ => date.ToString("dddd", CultureInfo.CurrentCulture),
+    };
+}

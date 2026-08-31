@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+
+<div class="mobile-shell">
+    <header class="mobile-topbar">
+        <div class="mobile-brand-mark">N</div>
+        <div>
+            <p class="mobile-brand-eyebrow">NUNG</p>
+            <p class="mobile-brand-name">Розклад занять</p>
+        </div>
+    </header>
+
+    <main class="mobile-content">
+        @Body
+    </main>
+
+    <nav class="mobile-bottom-nav" aria-label="Основна навігація">
+        <NavLink href="/schedule" Match="NavLinkMatch.All" class="mobile-nav-link">
+            <span class="mobile-nav-icon" aria-hidden="true">⌁</span>
+            <span>Розклад</span>
+        </NavLink>
+        <NavLink href="/settings" Match="NavLinkMatch.Prefix" class="mobile-nav-link">
+            <span class="mobile-nav-icon" aria-hidden="true">⚙</span>
+            <span>Налаштування</span>
+        </NavLink>
+    </nav>
+</div>
