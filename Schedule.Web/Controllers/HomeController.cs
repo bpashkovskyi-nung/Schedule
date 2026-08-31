@@ -34,33 +34,27 @@ public sealed class HomeController(
         return View(model);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> Unified(UnifiedScheduleFormVm form, CancellationToken cancellationToken) =>
         SearchUnifiedAsync(form, cancellationToken);
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> Rooms(RoomsScheduleFormVm form, CancellationToken cancellationToken) =>
         SearchRoomsAsync(form, cancellationToken);
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> Teachers(TeachersScheduleFormVm form, CancellationToken cancellationToken) =>
         SearchTeachersAsync(form, cancellationToken);
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> Groups(GroupsScheduleFormVm form, CancellationToken cancellationToken) =>
         SearchGroupsAsync(form, cancellationToken);
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> TeachingLoad(TeachingLoadFormVm form, CancellationToken cancellationToken) =>
         SearchTeachingLoadAsync(form, cancellationToken);
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public Task<IActionResult> AuditoriumLoad(AuditoriumLoadFormVm form, CancellationToken cancellationToken) =>
         SearchAuditoriumLoadAsync(form, cancellationToken);
 

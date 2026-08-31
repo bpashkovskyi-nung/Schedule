@@ -22,32 +22,32 @@
 
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "main-schedule" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#main-schedule" type="button">
+            <button class="nav-link @(Model.ActiveTab == "main-schedule" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#main-schedule" data-tab-url="@Url.Action("Index", "Home", new { tab = "main-schedule" })" type="button">
                 <i class="bi bi-calendar3"></i> Розклад занять
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "rooms" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#rooms" type="button">
+            <button class="nav-link @(Model.ActiveTab == "rooms" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#rooms" data-tab-url="@Url.Action("Index", "Home", new { tab = "rooms" })" type="button">
                 <i class="bi bi-building"></i> Аудиторії
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "auditorium-load" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#auditorium-load" type="button">
+            <button class="nav-link @(Model.ActiveTab == "auditorium-load" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#auditorium-load" data-tab-url="@Url.Action("Index", "Home", new { tab = "auditorium-load" })" type="button">
                 <i class="bi bi-bar-chart"></i> Завантаження аудиторій
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "teachers" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#teachers" type="button">
+            <button class="nav-link @(Model.ActiveTab == "teachers" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#teachers" data-tab-url="@Url.Action("Index", "Home", new { tab = "teachers" })" type="button">
                 <i class="bi bi-person-badge"></i> Викладачі
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "groups" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#groups" type="button">
+            <button class="nav-link @(Model.ActiveTab == "groups" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#groups" data-tab-url="@Url.Action("Index", "Home", new { tab = "groups" })" type="button">
                 <i class="bi bi-people"></i> Групи
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link @(Model.ActiveTab == "teaching-load" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#teaching-load" type="button">
+            <button class="nav-link @(Model.ActiveTab == "teaching-load" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#teaching-load" data-tab-url="@Url.Action("Index", "Home", new { tab = "teaching-load" })" type="button">
                 <i class="bi bi-graph-up"></i> Навчальне навантаження
             </button>
         </li>
@@ -57,8 +57,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "main-schedule" ? "show active" : "")" id="main-schedule">
             <div class="card">
                 <div class="card-body">
-                    <form id="unifiedForm" asp-action="Unified" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="unifiedForm" asp-action="Unified" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="unifiedFaculty">Факультет</label>
@@ -124,8 +123,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "rooms" ? "show active" : "")" id="rooms">
             <div class="card">
                 <div class="card-body">
-                    <form id="roomsForm" asp-action="Rooms" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="roomsForm" asp-action="Rooms" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="roomsBlock">Корпус</label>
@@ -170,8 +168,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "auditorium-load" ? "show active" : "")" id="auditorium-load">
             <div class="card">
                 <div class="card-body">
-                    <form id="auditoriumsForm" asp-action="AuditoriumLoad" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="auditoriumsForm" asp-action="AuditoriumLoad" method="get">
                         <div class="form-row auditoriums-load-form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="auditoriumsBlock">Корпус</label>
@@ -239,8 +236,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "teachers" ? "show active" : "")" id="teachers">
             <div class="card">
                 <div class="card-body">
-                    <form id="teachersForm" asp-action="Teachers" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="teachersForm" asp-action="Teachers" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="teachersDept">Підрозділ</label>
@@ -285,8 +281,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "groups" ? "show active" : "")" id="groups">
             <div class="card">
                 <div class="card-body">
-                    <form id="groupsForm" asp-action="Groups" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="groupsForm" asp-action="Groups" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="groupsDept">Підрозділ</label>
@@ -331,8 +326,7 @@
         <div class="tab-pane fade @(Model.ActiveTab == "teaching-load" ? "show active" : "")" id="teaching-load">
             <div class="card">
                 <div class="card-body">
-                    <form id="teachingLoadForm" asp-action="TeachingLoad" method="post">
-                        @Html.AntiForgeryToken()
+                    <form id="teachingLoadForm" asp-action="TeachingLoad" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="teachingLoadDept">Підрозділ</label>
