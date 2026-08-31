@@ -23,11 +23,22 @@ public abstract class ApiControllerBase : ControllerBase
             "room" or "rooms" or "auditorium" or "auditoriums";
     }
 
-    protected ApiErrorResponse? InvalidPeriod(DateOnly from, DateOnly to, int maxDays)
+    protected ApiErrorResponse? InvalidPeriod(DateOnly from, DateOnly to)
     {
         if (from > to)
         {
             return new ApiErrorResponse("invalid_period", "Дата початку не може бути пізнішою за дату завершення.");
+        }
+
+        return null;
+    }
+
+    protected ApiErrorResponse? InvalidPeriod(DateOnly from, DateOnly to, int maxDays)
+    {
+        ApiErrorResponse? orderError = InvalidPeriod(from, to);
+        if (orderError is not null)
+        {
+            return orderError;
         }
 
         int days = to.DayNumber - from.DayNumber + 1;

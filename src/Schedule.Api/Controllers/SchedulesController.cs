@@ -1,7 +1,5 @@
 using Dekanat.ScheduleSdk.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Schedule.Api.Configuration;
 using Schedule.Api.Services;
 using Schedule.Contracts.Common;
 using Schedule.Contracts.Schedules;
@@ -10,11 +8,8 @@ namespace Schedule.Api.Controllers;
 
 [Route("api/v1/schedules")]
 public sealed class SchedulesController(
-    IScheduleApiService scheduleService,
-    IOptions<ScheduleApiOptions> options) : ApiControllerBase
+    IScheduleApiService scheduleService) : ApiControllerBase
 {
-    private readonly ScheduleApiOptions apiOptions = options.Value;
-
     [HttpGet("{targetType}/{objectId}")]
     [ProducesResponseType<ScheduleResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
@@ -35,7 +30,7 @@ public sealed class SchedulesController(
             return BadRequest(new ApiErrorResponse("object_id_required", "Необхідно передати ідентифікатор об’єкта."));
         }
 
-        ApiErrorResponse? periodError = InvalidPeriod(from, to, apiOptions.MaxScheduleDays);
+        ApiErrorResponse? periodError = InvalidPeriod(from, to);
         if (periodError is not null)
         {
             return BadRequest(periodError);
@@ -69,7 +64,7 @@ public sealed class SchedulesController(
             return BadRequest(new ApiErrorResponse("invalid_schedule_target", "Некоректний тип або ідентифікатор об’єкта."));
         }
 
-        ApiErrorResponse? periodError = InvalidPeriod(from, to, apiOptions.MaxScheduleDays);
+        ApiErrorResponse? periodError = InvalidPeriod(from, to);
         if (periodError is not null)
         {
             return BadRequest(periodError);
