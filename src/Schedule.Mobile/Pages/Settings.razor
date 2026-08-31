@@ -53,7 +53,6 @@
         </section>
 
         <section class="mobile-card">
-            <div class="mobile-section-label">Підрозділ</div>
             <div class="mobile-field">
                 <span>@GetSubdivisionLabel(targetType)</span>
                 <div class="mobile-select-container">
@@ -82,14 +81,6 @@
                     }
                 </div>
             </div>
-        </section>
-
-        <section class="mobile-card">
-            <div class="mobile-section-label">Об’єкт</div>
-            <div class="mobile-field">
-                <span>Пошук</span>
-                <input class="mobile-input" type="search" placeholder="Фільтр за назвою…" @bind="objectFilter" @bind:event="oninput" />
-            </div>
             <div class="mobile-field">
                 <span>@GetTargetLabel(targetType)</span>
                 <div class="mobile-select-container">
@@ -105,17 +96,17 @@
                     @if (objectMenuOpen)
                     {
                         <div class="mobile-select-menu" role="listbox" aria-label="@GetTargetLabel(targetType)">
-                            @foreach (ScheduleEntityDto entity in CurrentEntities.Where(MatchesFilter))
+                            @foreach (ScheduleEntityDto entity in CurrentEntities)
                             {
                                 <button class="mobile-select-option @(selectedObjectId == entity.Id ? "is-selected" : string.Empty)"
                                         type="button"
                                         role="option"
                                         aria-selected="@(selectedObjectId == entity.Id)"
                                         @onclick="() => SelectObject(entity.Id)">
-                                    @GetEntityLabel(entity)
+                                        @GetEntityLabel(entity)
                                 </button>
                             }
-                            @if (!CurrentEntities.Any(MatchesFilter))
+                            @if (CurrentEntities.Count == 0)
                             {
                                 <div class="mobile-select-empty">Нічого не знайдено</div>
                             }
@@ -123,13 +114,6 @@
                     }
                 </div>
             </div>
-            @if (!string.IsNullOrWhiteSpace(selectedObjectId))
-            {
-                <div class="mobile-selection-pill">
-                    <span class="mobile-selection-dot"></span>
-                    @GetSelectedObjectName()
-                </div>
-            }
         </section>
 
         <section class="mobile-card">
@@ -192,7 +176,6 @@
     private ScheduleTargetType targetType = ScheduleTargetType.Group;
     private string selectedObjectId = string.Empty;
     private string selectedSubdivisionName = string.Empty;
-    private string objectFilter = string.Empty;
     private bool subdivisionMenuOpen;
     private bool objectMenuOpen;
     private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
@@ -230,7 +213,6 @@
         targetType = value;
         selectedObjectId = string.Empty;
         selectedSubdivisionName = string.Empty;
-        objectFilter = string.Empty;
         subdivisionMenuOpen = false;
         objectMenuOpen = false;
         validationMessage = null;
@@ -246,7 +228,6 @@
     {
         selectedSubdivisionName = value;
         selectedObjectId = string.Empty;
-        objectFilter = string.Empty;
         subdivisionMenuOpen = false;
         objectMenuOpen = false;
         validationMessage = null;
@@ -337,10 +318,6 @@
     private IReadOnlyList<ScheduleEntityDto> CurrentEntities =>
         CurrentSubdivisions
             .FirstOrDefault(item => item.Name == selectedSubdivisionName)?.Entities ?? [];
-
-    private bool MatchesFilter(ScheduleEntityDto entity) =>
-        string.IsNullOrWhiteSpace(objectFilter) ||
-        GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase);
 
     private string GetSelectedObjectName() =>
         CurrentEntities

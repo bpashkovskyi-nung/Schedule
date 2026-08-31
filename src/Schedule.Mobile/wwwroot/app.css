@@ -380,28 +380,6 @@ a {
     font-size: .82rem;
 }
 
-.mobile-selection-pill {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    overflow: hidden;
-    padding: .55rem .7rem;
-    border-radius: .7rem;
-    background: var(--mobile-accent-soft);
-    color: #dcd8ff;
-    font-size: .85rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mobile-selection-dot {
-    width: .5rem;
-    height: .5rem;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: var(--mobile-accent);
-}
-
 .mobile-date-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
