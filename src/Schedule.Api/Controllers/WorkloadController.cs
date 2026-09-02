@@ -1,4 +1,5 @@
 using Dekanat.ScheduleSdk.Models;
+using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -48,12 +49,21 @@ public sealed class WorkloadController(
             List<PsRozkladExport> schedules = new(selected.Entities.Count);
             foreach (ScheduleEntityDto teacher in selected.Entities)
             {
-                schedules.Add(await scheduleService.GetScheduleExportAsync(
-                    ScheduleTargetType.Teacher,
-                    teacher.Id,
-                    from,
-                    to,
-                    cancellationToken));
+                try
+                {
+                    schedules.Add(await scheduleService.GetScheduleExportAsync(
+                        ScheduleTargetType.Teacher,
+                        teacher.Id,
+                        from,
+                        to,
+                        cancellationToken));
+                }
+                catch (PsRozkladApiException exception) when (
+                    exception.ErrorCode == (int)ApiResultCode.NotFound)
+                {
+                    // A teacher without lessons in the selected period still belongs in the report.
+                    schedules.Add(new PsRozkladExport { Code = 0, ScheduleItems = [] });
+                }
             }
 
             return Ok(ScheduleCalculations.BuildTeachingLoad(selected.Entities, schedules));

@@ -22,6 +22,9 @@ public sealed class HomeController(
     public IActionResult Error() => View();
 
     [HttpGet]
+    public IActionResult Privacy() => View();
+
+    [HttpGet]
     public async Task<IActionResult> Index(string? tab, CancellationToken cancellationToken)
     {
         ScheduleIndexViewModel model = await BuildBaseModelAsync(cancellationToken);
@@ -325,9 +328,18 @@ public sealed class HomeController(
             List<PsRozkladExport> schedules = new(teachers.Count);
             foreach (ScheduleEntityVm teacher in teachers)
             {
-                PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                    RequestMode.Teacher, teacher.Id, from, to, cancellationToken);
-                schedules.Add(export);
+                try
+                {
+                    PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
+                        RequestMode.Teacher, teacher.Id, from, to, cancellationToken);
+                    schedules.Add(export);
+                }
+                catch (PsRozkladApiException exception) when (
+                    exception.ErrorCode == (int)ApiResultCode.NotFound)
+                {
+                    // A teacher without lessons in the selected period still belongs in the report.
+                    schedules.Add(new PsRozkladExport { Code = 0, ScheduleItems = [] });
+                }
             }
 
             model.TeachingLoad.Result = ScheduleDisplayService.BuildTeachingLoad(teachers, schedules);
