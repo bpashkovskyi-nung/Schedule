@@ -1,32 +1,16 @@
-using Dekanat.ScheduleSdk;
 using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Models;
-using Dekanat.ScheduleSdk.Requests;
 using Schedule.Web.ViewModels;
 
 namespace Schedule.Web.Services;
 
-public sealed class ScheduleReferenceService(IPsRozkladClient client) : IScheduleReferenceService
+public sealed class ScheduleReferenceService(IScheduleRepository repository) : IScheduleReferenceService
 {
     public async Task<ReferenceDataVm> LoadReferenceDataAsync(CancellationToken cancellationToken = default)
     {
-        Task<PsRozkladExport> roomsTask = client.GetObjectListAsync(new ObjectListRequest
-        {
-            Mode = RequestMode.Room,
-            IncludeIds = true,
-        }, cancellationToken);
-
-        Task<PsRozkladExport> teachersTask = client.GetObjectListAsync(new ObjectListRequest
-        {
-            Mode = RequestMode.Teacher,
-            IncludeIds = true,
-        }, cancellationToken);
-
-        Task<PsRozkladExport> groupsTask = client.GetObjectListAsync(new ObjectListRequest
-        {
-            Mode = RequestMode.Group,
-            IncludeIds = true,
-        }, cancellationToken);
+        Task<PsRozkladExport> roomsTask = repository.GetObjectListAsync(RequestMode.Room, cancellationToken);
+        Task<PsRozkladExport> teachersTask = repository.GetObjectListAsync(RequestMode.Teacher, cancellationToken);
+        Task<PsRozkladExport> groupsTask = repository.GetObjectListAsync(RequestMode.Group, cancellationToken);
 
         await Task.WhenAll(roomsTask, teachersTask, groupsTask);
 

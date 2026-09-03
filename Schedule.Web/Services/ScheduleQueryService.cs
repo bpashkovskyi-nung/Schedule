@@ -1,15 +1,13 @@
-using Dekanat.ScheduleSdk;
 using Dekanat.ScheduleSdk.Enums;
 using Dekanat.ScheduleSdk.Models;
 using Dekanat.ScheduleSdk.Options;
-using Dekanat.ScheduleSdk.Requests;
 using Microsoft.Extensions.Options;
 using Schedule.Web.Configuration;
 
 namespace Schedule.Web.Services;
 
 public sealed class ScheduleQueryService(
-    IPsRozkladClient client,
+    IScheduleRepository repository,
     IOptions<LegacyFeatureOptions> featureOptions) : IScheduleQueryService
 {
     public Task<PsRozkladExport> GetScheduleAsync(
@@ -18,14 +16,7 @@ public sealed class ScheduleQueryService(
         DateOnly beginDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default) =>
-        client.GetScheduleAsync(new ScheduleRequest
-        {
-            Mode = mode,
-            ObjectId = objectId,
-            BeginDate = beginDate,
-            EndDate = endDate,
-            TextFormat = ScheduleTextFormat.United,
-        }, cancellationToken);
+        repository.GetScheduleAsync(mode, objectId, beginDate, endDate, cancellationToken);
 
     public string BuildExportUrl(RequestMode mode, string objectId, DateOnly beginDate, DateOnly endDate)
     {
@@ -39,7 +30,7 @@ public sealed class ScheduleQueryService(
             _ => "group",
         };
 
-        if (featureOptions.Value.GenerateIcalFromJson)
+        if (featureOptions.Value.GenerateIcalFromJson || repository?.SupportsDirectIcalExport == false)
         {
             return $"/Home/Ical?mode={modeValue}&objectId={Uri.EscapeDataString(objectId)}" +
                    $"&from={beginDate:yyyy-MM-dd}&to={endDate:yyyy-MM-dd}";
