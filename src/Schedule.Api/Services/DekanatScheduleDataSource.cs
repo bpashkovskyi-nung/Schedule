@@ -23,13 +23,24 @@ public sealed class DekanatScheduleDataSource(IPsRozkladClient client) : ISchedu
         string objectId,
         DateOnly beginDate,
         DateOnly endDate,
-        CancellationToken cancellationToken = default) =>
-        client.GetScheduleAsync(new ScheduleRequest
+    CancellationToken cancellationToken = default)
+    {
+        Task<PsRozkladExport> request = client.GetScheduleAsync(new ScheduleRequest
         {
             Mode = mode,
             ObjectId = objectId,
             BeginDate = beginDate,
             EndDate = endDate,
-            TextFormat = ScheduleTextFormat.United,
+            TextFormat = ScheduleTextFormat.Separated,
         }, cancellationToken);
+
+        return NormalizeScheduleAsync(request);
+    }
+
+    private static async Task<PsRozkladExport> NormalizeScheduleAsync(Task<PsRozkladExport> request)
+    {
+        PsRozkladExport export = await request;
+        ScheduleItemDescription.Normalize(export.ScheduleItems);
+        return export;
+    }
 }

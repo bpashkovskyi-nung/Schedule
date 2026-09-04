@@ -70,6 +70,7 @@ internal static class ApiIcalGenerator
         AddDetail(details, "Група", item.Group);
         AddDetail(details, "Аудиторія", item.Room);
         AddDetail(details, "Онлайн", item.Online);
+        AddDetail(details, "Коментар до посилання", item.LinkComment);
         AddDetail(details, "Посилання", item.Link);
         AddDetail(details, "Заміна", item.Replacement);
         AddDetail(details, "Коментар", item.Comment);

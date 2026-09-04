@@ -1,6 +1,7 @@
 using Dekanat.ScheduleSdk;
 using Dekanat.ScheduleSdk.Models;
 using Schedule.Web.ViewModels;
+using System.Text.RegularExpressions;
 
 namespace Schedule.Web.Services;
 
@@ -183,7 +184,38 @@ internal static class ScheduleDisplayService
         LessonNumber = item.LessonNumber ?? string.Empty,
         LessonTime = item.LessonTime ?? string.Empty,
         LessonDescription = item.LessonDescription ?? string.Empty,
+        Links = ParseLinks(item.Link, item.LinkComment),
     };
+
+    private static IReadOnlyList<ScheduleLinkVm> ParseLinks(string? value, string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        List<string> urls = Regex.Matches(value, @"https?://[^\s<>]+", RegexOptions.IgnoreCase)
+            .Select(match => TrimUrl(match.Value))
+            .Where(IsHttpUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        string label = string.IsNullOrWhiteSpace(comment) ? "Онлайн-заняття" : comment.Trim();
+        return urls
+            .Select((url, index) => new ScheduleLinkVm
+            {
+                Url = url,
+                Label = urls.Count == 1 ? label : $"{label} {index + 1}",
+            })
+            .ToList();
+    }
+
+    private static string TrimUrl(string value) =>
+        value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private static string? ExtractSessionType(string? lessonDescription)
     {

@@ -99,6 +99,9 @@
                                             <span>@lesson.Teacher</span>
                                         }
                                     </div>
+                                    <global::Schedule.Client.UI.Components.LessonLinks
+                                        Link="lesson.Link"
+                                        LinkComment="lesson.LinkComment" />
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(lesson.LessonNumber))
                                 {

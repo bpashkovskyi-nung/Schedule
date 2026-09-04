@@ -538,6 +538,23 @@ body {
     padding: 4px 0;
 }
 
+.schedule-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+}
+
+.schedule-links a {
+    color: #0d6efd;
+    font-size: 0.85em;
+    text-decoration: none;
+}
+
+.schedule-links a:hover {
+    text-decoration: underline;
+}
+
 .lesson-comment {
     font-style: italic;
     color: #dc3545;

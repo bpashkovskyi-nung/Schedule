@@ -40,7 +40,10 @@
                             <tr>
                                 <td class="text-center fw-bold">@item.LessonNumber</td>
                                 <td class="text-primary fw-bold">@item.LessonTime</td>
-                                <td>@item.LessonDescription</td>
+                                <td>
+                                    <div>@item.LessonDescription</div>
+                                    @await Html.PartialAsync("_ScheduleLinks", item.Links)
+                                </td>
                             </tr>
                         }
                     </tbody>

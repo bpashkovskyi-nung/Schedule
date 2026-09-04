@@ -230,6 +230,23 @@ input {
     font-size: .82rem;
 }
 
+.lesson-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .25rem;
+}
+
+.lesson-links a {
+    color: #4f6f99;
+    font-size: .82rem;
+    text-decoration: none;
+}
+
+.lesson-links a:hover {
+    text-decoration: underline;
+}
+
 .result-table {
     margin-top: 1.5rem;
 }

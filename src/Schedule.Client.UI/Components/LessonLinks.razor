@@ -1,0 +1,52 @@
+@if (ParsedLinks.Count > 0)
+{
+    <div class="lesson-links">
+        @foreach (ParsedLink link in ParsedLinks)
+        {
+            <a href="@link.Url" target="_blank" rel="noopener noreferrer">
+                <span aria-hidden="true">↗</span> @link.Label
+            </a>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Link { get; set; }
+
+    [Parameter]
+    public string? LinkComment { get; set; }
+
+    private IReadOnlyList<ParsedLink> ParsedLinks => ParseLinks(Link, LinkComment);
+
+    private static IReadOnlyList<ParsedLink> ParseLinks(string? value, string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        List<string> urls = System.Text.RegularExpressions.Regex
+            .Matches(value, @"https?://[^\s<>]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            .Select(match => TrimUrl(match.Value))
+            .Where(IsHttpUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        string label = string.IsNullOrWhiteSpace(comment) ? "Онлайн-заняття" : comment.Trim();
+        return urls
+            .Select((url, index) => new ParsedLink(
+                url,
+                urls.Count == 1 ? label : $"{label} {index + 1}"))
+            .ToList();
+    }
+
+    private static string TrimUrl(string value) =>
+        value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private sealed record ParsedLink(string Url, string Label);
+}

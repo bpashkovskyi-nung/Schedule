@@ -40,6 +40,22 @@ public sealed class ScheduleCalculationsTests
     }
 
     [Fact]
+    public void ScheduleItemDescription_NormalizesSeparatedDekanatFields()
+    {
+        ScheduleItem item = new()
+        {
+            Title = "Програмування",
+            Type = "Лаб",
+            Teacher = "Викладач Тестовий",
+            Room = "1.216.ауд.",
+        };
+
+        ScheduleItemDescription.Normalize([item]);
+
+        item.LessonDescription.Should().Be("Програмування (Лаб) Викладач Тестовий 1.216.ауд.");
+    }
+
+    [Fact]
     public void BuildTeachingLoad_CreatesColumnsAndTotals()
     {
         ScheduleEntityDto[] teachers =

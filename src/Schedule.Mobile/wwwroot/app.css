@@ -683,6 +683,23 @@ a {
     font-size: .74rem;
 }
 
+.mobile-lesson-main .lesson-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: .55rem;
+}
+
+.mobile-lesson-main .lesson-links a {
+    color: #bdb2ff;
+    font-size: .76rem;
+    text-decoration: none;
+}
+
+.mobile-lesson-main .lesson-links a:hover {
+    text-decoration: underline;
+}
+
 .mobile-lesson-number {
     padding-top: .05rem;
     color: rgba(159, 185, 213, .3);

@@ -58,6 +58,7 @@
                                                             <div class="lesson-item">
                                                                 <div class="lesson-time">@lesson.LessonTime</div>
                                                                 <div class="lesson-description">@lesson.LessonDescription</div>
+                                                                @await Html.PartialAsync("_ScheduleLinks", lesson.Links)
                                                             </div>
                                                         }
                                                     }

@@ -96,11 +96,14 @@ public sealed class DatabaseScheduleRepository(IDbContextFactory<ScheduleDbConte
             .ThenBy(x => x.LessonNumber)
             .ToListAsync(cancellationToken);
 
-        return new PsRozkladExport
+        PsRozkladExport export = new()
         {
             Code = 0,
             ScheduleItems = lessons.Select(MapLesson).ToList(),
         };
+
+        ScheduleItemDescription.Normalize(export.ScheduleItems);
+        return export;
     }
 
     private static string ToTargetType(RequestMode mode) => mode switch

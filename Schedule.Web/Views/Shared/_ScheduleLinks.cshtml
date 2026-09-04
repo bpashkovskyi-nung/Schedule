@@ -1,0 +1,13 @@
+@model IReadOnlyList<ScheduleLinkVm>
+
+@if (Model.Count > 0)
+{
+    <div class="schedule-links">
+        @foreach (ScheduleLinkVm link in Model)
+        {
+            <a href="@link.Url" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-box-arrow-up-right"></i> @link.Label
+            </a>
+        }
+    </div>
+}
