@@ -13,13 +13,15 @@ using Schedule.Contracts.Schedules;
 namespace Schedule.Api.Services;
 
 public sealed class ScheduleApiService(
-    IPsRozkladClient client,
+    IScheduleDataSource dataSource,
     IOptions<ScheduleApiOptions> options,
     IMemoryCache cache) : IScheduleApiService
 {
     private const string ReferenceCacheKey = "schedule-api:reference-data";
     private static readonly SemaphoreSlim ReferenceLock = new(1, 1);
     private readonly ScheduleApiOptions options = options.Value;
+
+    public bool IsDatabaseSource => dataSource.IsDatabase;
 
     public async Task<ReferenceDataResponse> GetReferenceDataAsync(CancellationToken cancellationToken = default)
     {
@@ -36,23 +38,17 @@ public sealed class ScheduleApiService(
                 return cached;
             }
 
-            Task<PsRozkladExport> roomsTask = client.GetObjectListAsync(new ObjectListRequest
-            {
-                Mode = RequestMode.Room,
-                IncludeIds = true,
-            }, cancellationToken);
+            Task<PsRozkladExport> roomsTask = dataSource.GetObjectListAsync(
+                RequestMode.Room,
+                cancellationToken);
 
-            Task<PsRozkladExport> teachersTask = client.GetObjectListAsync(new ObjectListRequest
-            {
-                Mode = RequestMode.Teacher,
-                IncludeIds = true,
-            }, cancellationToken);
+            Task<PsRozkladExport> teachersTask = dataSource.GetObjectListAsync(
+                RequestMode.Teacher,
+                cancellationToken);
 
-            Task<PsRozkladExport> groupsTask = client.GetObjectListAsync(new ObjectListRequest
-            {
-                Mode = RequestMode.Group,
-                IncludeIds = true,
-            }, cancellationToken);
+            Task<PsRozkladExport> groupsTask = dataSource.GetObjectListAsync(
+                RequestMode.Group,
+                cancellationToken);
 
             await Task.WhenAll(roomsTask, teachersTask, groupsTask);
 
@@ -87,14 +83,12 @@ public sealed class ScheduleApiService(
         DateOnly to,
         CancellationToken cancellationToken = default)
     {
-        PsRozkladExport export = await client.GetScheduleAsync(new ScheduleRequest
-        {
-            Mode = ToRequestMode(targetType),
-            ObjectId = objectId,
-            BeginDate = from,
-            EndDate = to,
-            TextFormat = ScheduleTextFormat.United,
-        }, cancellationToken);
+        PsRozkladExport export = await dataSource.GetScheduleAsync(
+            ToRequestMode(targetType),
+            objectId,
+            from,
+            to,
+            cancellationToken);
 
         if (!export.IsSuccess)
         {
@@ -121,6 +115,23 @@ public sealed class ScheduleApiService(
             Period = new DateRangeDto(from, to),
             Lessons = (export.ScheduleItems ?? []).Select(MapLesson).ToList(),
         };
+    }
+
+    public async Task<byte[]> GenerateIcalAsync(
+        ScheduleTargetType targetType,
+        string objectId,
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        PsRozkladExport export = await GetScheduleExportAsync(
+            targetType,
+            objectId,
+            from,
+            to,
+            cancellationToken);
+
+        return ApiIcalGenerator.Generate(export, objectId);
     }
 
     public string BuildIcalUrl(ScheduleTargetType targetType, string objectId, DateOnly from, DateOnly to)

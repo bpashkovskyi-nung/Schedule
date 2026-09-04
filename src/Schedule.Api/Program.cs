@@ -1,7 +1,9 @@
 using System.Threading.RateLimiting;
 using Dekanat.ScheduleSdk.DependencyInjection;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Schedule.Api.Configuration;
+using Schedule.Api.Database;
 using Schedule.Api.Middleware;
 using Schedule.Api.Services;
 using Schedule.Contracts.Common;
@@ -12,13 +14,42 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.Configure<ScheduleApiOptions>(
     builder.Configuration.GetSection(ScheduleApiOptions.SectionName));
+builder.Services.Configure<ScheduleSourceOptions>(
+    builder.Configuration.GetSection(ScheduleSourceOptions.SectionName));
+
 int externalTimeoutSeconds = Math.Max(
     1,
     builder.Configuration.GetValue<int?>($"{ScheduleApiOptions.SectionName}:ExternalRequestTimeoutSeconds") ?? 60);
-builder.Services.AddPsRozkladClient(options =>
+
+ScheduleSourceOptions scheduleSource = new();
+builder.Configuration.GetSection(ScheduleSourceOptions.SectionName).Bind(scheduleSource);
+
+if (scheduleSource.IsDatabase)
 {
-    options.RequestTimeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
-});
+    string? connectionString = builder.Configuration.GetConnectionString(scheduleSource.ConnectionStringName);
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException(
+            $"Connection string '{scheduleSource.ConnectionStringName}' is required when ScheduleSource:Provider is Database.");
+    }
+
+    builder.Services.AddDbContextFactory<ScheduleDbContext>(options => options.UseSqlServer(connectionString));
+    builder.Services.AddScoped<IScheduleDataSource, DatabaseScheduleDataSource>();
+}
+else if (string.Equals(scheduleSource.Provider, "Dekanat", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddPsRozkladClient(options =>
+    {
+        options.RequestTimeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
+    });
+    builder.Services.AddScoped<IScheduleDataSource, DekanatScheduleDataSource>();
+}
+else
+{
+    throw new InvalidOperationException(
+        $"Unsupported ScheduleSource:Provider '{scheduleSource.Provider}'. Use 'Dekanat' or 'Database'.");
+}
+
 builder.Services.AddScoped<IScheduleApiService, ScheduleApiService>();
 builder.Services.AddTransient<TransientRetryHandler>();
 builder.Services.AddHttpClient<ITimetableSuggestionsService, TimetableSuggestionsService>(client =>

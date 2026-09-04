@@ -52,11 +52,12 @@ public sealed class SchedulesController(
     }
 
     [HttpGet("{targetType}/{objectId}/ical")]
-    public ActionResult GetIcal(
+    public async Task<ActionResult> GetIcal(
         string targetType,
         string objectId,
         [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to)
+        [FromQuery] DateOnly to,
+        CancellationToken cancellationToken)
     {
         if (!TryParseTargetType(targetType, out ScheduleTargetType parsedTarget) ||
             string.IsNullOrWhiteSpace(objectId))
@@ -70,6 +71,29 @@ public sealed class SchedulesController(
             return BadRequest(periodError);
         }
 
+        if (scheduleService.IsDatabaseSource)
+        {
+            byte[] calendar = await scheduleService.GenerateIcalAsync(
+                parsedTarget,
+                objectId,
+                from,
+                to,
+                cancellationToken);
+
+            return File(
+                calendar,
+                "text/calendar; charset=utf-8",
+                SanitizeFileName(objectId) + ".ics");
+        }
+
         return Redirect(scheduleService.BuildIcalUrl(parsedTarget, objectId, from, to));
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        string fileName = string.Concat(value.Where(character =>
+            char.IsLetterOrDigit(character) || character is '-' or '_' or ' '));
+        fileName = fileName.Trim().Replace(' ', '_');
+        return string.IsNullOrWhiteSpace(fileName) ? "schedule" : fileName;
     }
 }
