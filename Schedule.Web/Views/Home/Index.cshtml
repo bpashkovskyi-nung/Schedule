@@ -1,6 +1,9 @@
 @model ScheduleIndexViewModel
 @{
     ViewData["Title"] = "Розклад занять";
+    var roomsByBlock = Model.Reference.Blocks.ToDictionary(
+        b => b.Name,
+        b => b.Rooms.Select(r => new { id = r.Id, name = r.Name }));
     var teachersByDept = Model.Reference.TeacherDepartments.ToDictionary(
         d => d.Name,
         d => d.Entities.Select(t => new { id = t.Id, name = t.FullName }));
@@ -18,7 +21,21 @@
     }
 
     <ul class="nav nav-tabs mb-4" role="tablist">
-        @* Тимчасово приховані вкладки: Розклад занять, Аудиторії, Завантаження аудиторій. *@
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "main-schedule" ? "active" : "")" href="@Url.Content("~/")?tab=main-schedule" role="tab">
+                <i class="bi bi-calendar3"></i> Розклад занять
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "rooms" ? "active" : "")" href="@Url.Content("~/")?tab=rooms" role="tab">
+                <i class="bi bi-building"></i> Аудиторії
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "auditorium-load" ? "active" : "")" href="@Url.Content("~/")?tab=auditorium-load" role="tab">
+                <i class="bi bi-bar-chart"></i> Завантаження аудиторій
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "teachers" ? "active" : "")" href="@Url.Content("~/")?tab=teachers" role="tab">
                 <i class="bi bi-person-badge"></i> Викладачі
@@ -29,11 +46,202 @@
                 <i class="bi bi-people"></i> Групи
             </a>
         </li>
-        @* Тимчасово прихована вкладка: Навчальне навантаження. *@
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "teaching-load" ? "active" : "")" href="@Url.Content("~/")?tab=teaching-load" role="tab">
+                <i class="bi bi-graph-up"></i> Навчальне навантаження
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content">
-    @if (Model.ActiveTab == "teachers")
+    @if (Model.ActiveTab == "main-schedule")
+    {
+        <div class="tab-pane show active" id="main-schedule">
+            <div class="card">
+                <div class="card-body">
+                    <form id="unifiedForm" asp-action="Unified" method="get">
+                        <div class="form-row">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="unifiedFaculty">Факультет</label>
+                                <select class="form-select" id="unifiedFaculty" name="FacultyName" required>
+                                    <option value="">Оберіть факультет</option>
+                                    @foreach (DepartmentVm faculty in Model.Reference.GroupDepartments)
+                                    {
+                                        @await Html.PartialAsync("_Option", (faculty.Name, faculty.Name, Model.Unified.FacultyName == faculty.Name))
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="unifiedCourse">Курс</label>
+                                <select class="form-select" id="unifiedCourse" name="Course">
+                                    @foreach ((int Value, string Label) course in Model.CourseOptions)
+                                    {
+                                        @await Html.PartialAsync("_Option", (course.Value.ToString(), course.Label, Model.Unified.Course == course.Value))
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="unifiedTeacher">Викладач</label>
+                                <select class="form-select" id="unifiedTeacher" name="TeacherId" @(string.IsNullOrEmpty(Model.Unified.FacultyName) ? "disabled" : null)>
+                                    <option value="">Не обрано</option>
+                                    @foreach (ScheduleEntityVm teacher in Model.Unified.AvailableTeachers)
+                                    {
+                                        @await Html.PartialAsync("_Option", (teacher.Id, teacher.FullName, Model.Unified.TeacherId == teacher.Id))
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="unifiedGroup">Група</label>
+                                <select class="form-select" id="unifiedGroup" name="GroupId" @(string.IsNullOrEmpty(Model.Unified.FacultyName) ? "disabled" : null)>
+                                    <option value="">Не обрано</option>
+                                    @foreach (ScheduleEntityVm group in Model.Unified.AvailableGroups)
+                                    {
+                                        @await Html.PartialAsync("_Option", (group.Id, group.Name, Model.Unified.GroupId == group.Id))
+                                    }
+                                </select>
+                            </div>
+                            @{
+                                ViewData["Prefix"] = "unified";
+                                ViewData["PeriodId"] = "unifiedPeriod";
+                                ViewData["FromId"] = "unifiedFrom";
+                                ViewData["ToId"] = "unifiedTo";
+                                ViewData["PeriodOptions"] = Model.PeriodOptions;
+                            }
+                            @await Html.PartialAsync("_PeriodFields", Model.Unified)
+                            <div class="form-group mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="unifiedWeekly" @(Model.Unified.WeeklyView ? "checked" : null) />
+                                    <label class="form-check-label" for="unifiedWeekly">Тижневий вигляд</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Показати розклад занять</button>
+                    </form>
+                </div>
+            </div>
+            @await Html.PartialAsync("_ScheduleResult", Model.Unified.Result)
+        </div>
+    }
+    else if (Model.ActiveTab == "rooms")
+    {
+        <div class="tab-pane show active" id="rooms">
+            <div class="card">
+                <div class="card-body">
+                    <form id="roomsForm" asp-action="Rooms" method="get">
+                        <div class="form-row">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="roomsBlock">Корпус</label>
+                                <select class="form-select" id="roomsBlock" name="BlockName" required>
+                                    <option value="">Оберіть корпус</option>
+                                    @foreach (BuildingVm block in Model.Reference.Blocks)
+                                    {
+                                        @await Html.PartialAsync("_Option", (block.Name, block.Name, Model.Rooms.BlockName == block.Name))
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="roomsRoom">Аудиторія</label>
+                                <select class="form-select" id="roomsRoom" name="RoomId" required>
+                                    <option value="">Оберіть аудиторію</option>
+                                    @foreach (ScheduleEntityVm room in ScheduleLookup.GetRoomsForBlock(Model.Reference, Model.Rooms.BlockName))
+                                    {
+                                        @await Html.PartialAsync("_Option", (room.Id, room.Name, Model.Rooms.RoomId == room.Id))
+                                    }
+                                </select>
+                            </div>
+                            @{
+                                ViewData["PeriodId"] = "roomsPeriod";
+                                ViewData["FromId"] = "roomsFrom";
+                                ViewData["ToId"] = "roomsTo";
+                                ViewData["PeriodOptions"] = Model.PeriodOptions;
+                            }
+                            @await Html.PartialAsync("_PeriodFields", Model.Rooms)
+                            <div class="form-group mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="roomsWeekly" @(Model.Rooms.WeeklyView ? "checked" : null) />
+                                    <label class="form-check-label" for="roomsWeekly">Тижневий вигляд</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Знайти розклад</button>
+                    </form>
+                </div>
+            </div>
+            @await Html.PartialAsync("_ScheduleResult", Model.Rooms.Result)
+        </div>
+    }
+    else if (Model.ActiveTab == "auditorium-load")
+    {
+        <div class="tab-pane show active" id="auditorium-load">
+            <div class="card">
+                <div class="card-body">
+                    <form id="auditoriumsForm" asp-action="AuditoriumLoad" method="get">
+                        <div class="form-row auditoriums-load-form-row">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="auditoriumsBlock">Корпус</label>
+                                <select class="form-select" id="auditoriumsBlock" name="BlockName">
+                                    <option value="">Усі корпуси</option>
+                                    @foreach (BuildingVm block in Model.Reference.Blocks)
+                                    {
+                                        @await Html.PartialAsync("_Option", (block.Name, block.Name, Model.AuditoriumLoad.BlockName == block.Name))
+                                    }
+                                </select>
+                            </div>
+                            @{
+                                ViewData["PeriodId"] = "auditoriumsPeriod";
+                                ViewData["FromId"] = "auditoriumsFrom";
+                                ViewData["ToId"] = "auditoriumsTo";
+                                ViewData["PeriodOptions"] = Model.PeriodOptions;
+                            }
+                            @await Html.PartialAsync("_PeriodFields", Model.AuditoriumLoad)
+                            <div class="form-group mb-3 auditoriums-pairs-group">
+                                <label class="form-label" for="pairsFrom">Пари від</label>
+                                <input type="number" class="form-control" id="pairsFrom" name="PairsFrom" min="1" value="@Model.AuditoriumLoad.PairsFrom" required />
+                            </div>
+                            <div class="form-group mb-3 auditoriums-pairs-group">
+                                <label class="form-label" for="pairsTo">Пари до</label>
+                                <input type="number" class="form-control" id="pairsTo" name="PairsTo" min="1" value="@Model.AuditoriumLoad.PairsTo" required />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Порахувати завантаження</button>
+                    </form>
+                </div>
+            </div>
+            @if (Model.AuditoriumLoad.Result is not null)
+            {
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="mb-0">Завантаження аудиторій</h5>
+                        <small class="text-muted">@Model.AuditoriumLoad.Summary</small>
+                        <div class="d-flex flex-column gap-3 mt-3">
+                            @foreach (AuditoriumLoadItemVm item in Model.AuditoriumLoad.Result.Items)
+                            {
+                                double percent = Math.Min(100, Math.Max(0, item.Percent));
+                                <div class="auditorium-load-item card shadow-none">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="fw-bold">@item.RoomName</div>
+                                            <small class="text-muted">@item.BlockName</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold" style="color:@item.HeatColor">@percent.ToString("F1")%</div>
+                                            <small class="text-muted">@item.ActualPairs/@item.PossiblePairs пар</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="progress" style="height:14px">
+                                            <div class="progress-bar" style="width:@(percent)%;background-color:@item.HeatColor"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (Model.ActiveTab == "teachers")
     {
         <div class="tab-pane show active" id="teachers">
             <div class="card">
@@ -81,7 +289,7 @@
             @await Html.PartialAsync("_ScheduleResult", Model.Teachers.Result)
         </div>
     }
-    else
+    else if (Model.ActiveTab == "groups")
     {
         <div class="tab-pane show active" id="groups">
             <div class="card">
@@ -127,6 +335,73 @@
                 </div>
             </div>
             @await Html.PartialAsync("_ScheduleResult", Model.Groups.Result)
+        </div>
+    }
+    else if (Model.ActiveTab == "teaching-load")
+    {
+        <div class="tab-pane show active" id="teaching-load">
+            <div class="card">
+                <div class="card-body">
+                    <form id="teachingLoadForm" asp-action="TeachingLoad" method="get">
+                        <div class="form-row">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="teachingLoadDept">Підрозділ</label>
+                                <select class="form-select" id="teachingLoadDept" name="DepartmentName" required>
+                                    <option value="">Оберіть підрозділ</option>
+                                    @foreach (DepartmentVm dept in Model.Reference.TeacherDepartments)
+                                    {
+                                        @await Html.PartialAsync("_Option", (dept.Name, dept.Name, Model.TeachingLoad.DepartmentName == dept.Name))
+                                    }
+                                </select>
+                            </div>
+                            @{
+                                ViewData["PeriodId"] = "teachingLoadPeriod";
+                                ViewData["FromId"] = "teachingLoadFrom";
+                                ViewData["ToId"] = "teachingLoadTo";
+                                ViewData["PeriodOptions"] = Model.PeriodOptions;
+                            }
+                            @await Html.PartialAsync("_PeriodFields", Model.TeachingLoad)
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Розрахувати навантаження</button>
+                    </form>
+                </div>
+            </div>
+            @if (Model.TeachingLoad.Result is not null)
+            {
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="mb-3">Навчальне навантаження викладачів</h5>
+                        <small class="text-muted d-block mb-3">Кількість годин (кількість пар × 2)</small>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Викладач</th>
+                                        @foreach (string sessionType in Model.TeachingLoad.Result.SessionTypes)
+                                        {
+                                            <th class="text-center">@sessionType</th>
+                                        }
+                                        <th class="text-center table-primary">Всього</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (TeachingLoadRowVm row in Model.TeachingLoad.Result.Rows)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold">@row.TeacherName</td>
+                                            @foreach (string sessionType in Model.TeachingLoad.Result.SessionTypes)
+                                            {
+                                                <td class="text-center">@row.HoursByType.GetValueOrDefault(sessionType)</td>
+                                            }
+                                            <td class="text-center fw-bold table-primary">@row.TotalHours</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     }
 

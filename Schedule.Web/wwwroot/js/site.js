@@ -84,10 +84,33 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        initPeriodFields('unifiedForm', 'unifiedPeriod', 'unifiedFrom', 'unifiedTo');
+        initPeriodFields('roomsForm', 'roomsPeriod', 'roomsFrom', 'roomsTo');
         initPeriodFields('teachersForm', 'teachersPeriod', 'teachersFrom', 'teachersTo');
         initPeriodFields('groupsForm', 'groupsPeriod', 'groupsFrom', 'groupsTo');
+        initPeriodFields('teachingLoadForm', 'teachingLoadPeriod', 'teachingLoadFrom', 'teachingLoadTo');
+        initPeriodFields('auditoriumsForm', 'auditoriumsPeriod', 'auditoriumsFrom', 'auditoriumsTo');
 
+        initCascade('roomsBlock', 'roomsRoom', 'roomsByBlockJson');
         initDepartmentCascade('teachersDept', 'teachersTeacher', 'teachersByDeptJson', 'Оберіть викладача');
         initDepartmentCascade('groupsDept', 'groupsGroup', 'groupsByDeptJson', 'Оберіть групу');
+
+        const faculty = document.getElementById('unifiedFaculty');
+        const course = document.getElementById('unifiedCourse');
+        if (faculty) {
+            function reloadUnified() {
+                const teacher = document.getElementById('unifiedTeacher');
+                const group = document.getElementById('unifiedGroup');
+                if (teacher) teacher.value = '';
+                if (group) group.value = '';
+                const params = new URLSearchParams({
+                    facultyName: faculty.value || '',
+                    course: course ? course.value : '0',
+                });
+                window.location = '/Home/ReloadUnifiedLists?' + params.toString();
+            }
+            faculty.addEventListener('change', reloadUnified);
+            if (course) course.addEventListener('change', reloadUnified);
+        }
     });
 })();
