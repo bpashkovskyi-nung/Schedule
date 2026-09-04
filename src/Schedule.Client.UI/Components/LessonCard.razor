@@ -1,8 +1,8 @@
 <article class="lesson-card">
     <div class="lesson-card__time">@Lesson.LessonTime</div>
     <div class="lesson-card__content">
-        <strong>@(string.IsNullOrWhiteSpace(Lesson.LessonName) ? Lesson.LessonDescription : Lesson.LessonName)</strong>
-        @if (!string.IsNullOrWhiteSpace(Lesson.LessonDescription) && Lesson.LessonDescription != Lesson.LessonName)
+        <strong>@GetTitle(Lesson)</strong>
+        @if (!string.IsNullOrWhiteSpace(Lesson.LessonDescription) && GetTitle(Lesson) != Lesson.LessonDescription)
         {
             <span>@Lesson.LessonDescription</span>
         }
@@ -30,4 +30,10 @@
 @code {
     [Parameter, EditorRequired]
     public LessonDto Lesson { get; set; } = default!;
+
+    private static string GetTitle(LessonDto lesson) =>
+        FirstNonEmpty(lesson.LessonDescription, lesson.Title, lesson.LessonName, "Заняття");
+
+    private static string FirstNonEmpty(params string[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? "Заняття";
 }
