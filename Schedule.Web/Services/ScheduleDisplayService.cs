@@ -189,18 +189,19 @@ internal static class ScheduleDisplayService
 
     private static IReadOnlyList<ScheduleLinkVm> ParseLinks(string? value, string? comment)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(comment))
         {
             return [];
         }
 
-        List<string> urls = Regex.Matches(value, @"https?://[^\s<>]+", RegexOptions.IgnoreCase)
+        string source = string.Join("\n", new[] { value, comment }.Where(item => !string.IsNullOrWhiteSpace(item)));
+        List<string> urls = Regex.Matches(source, @"https?://[^\s<>;,""']+", RegexOptions.IgnoreCase)
             .Select(match => TrimUrl(match.Value))
             .Where(IsHttpUrl)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        string label = string.IsNullOrWhiteSpace(comment) ? "Онлайн-заняття" : comment.Trim();
+        string label = GetLinkLabel(comment);
         return urls
             .Select((url, index) => new ScheduleLinkVm
             {
@@ -208,6 +209,13 @@ internal static class ScheduleDisplayService
                 Label = urls.Count == 1 ? label : $"{label} {index + 1}",
             })
             .ToList();
+    }
+
+    private static string GetLinkLabel(string? comment)
+    {
+        string label = Regex.Replace(comment ?? string.Empty, @"https?://[^\s<>;,""']+", string.Empty, RegexOptions.IgnoreCase)
+            .Trim(' ', '\t', '\r', '\n', ':', ';', ',');
+        return string.IsNullOrWhiteSpace(label) ? "Онлайн-заняття" : label;
     }
 
     private static string TrimUrl(string value) =>
