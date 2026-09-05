@@ -35,7 +35,6 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
             }
 
             string summary = BuildSummary(item);
-            string description = BuildDescription(item);
 
             AppendLine(calendar, "BEGIN:VEVENT");
             AppendProperty(calendar, "UID", CreateUid(calendarName, index, item, date.Value));
@@ -57,7 +56,6 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
             }
 
             AppendProperty(calendar, "SUMMARY", summary);
-            AppendProperty(calendar, "DESCRIPTION", description);
             AppendProperty(calendar, "LOCATION", item.Room);
             AppendProperty(calendar, "SEQUENCE", "0");
             AppendProperty(calendar, "STATUS", "CONFIRMED");
@@ -68,48 +66,49 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
         return Encoding.UTF8.GetBytes(calendar.ToString());
     }
 
-    private static string BuildDescription(ScheduleItem item)
-    {
-        List<string> details = [];
-        AddDetail(details, "Об'єкт", item.ObjectName);
-        AddDetail(details, "Дата", item.Date);
-        AddDetail(details, "Номер пари", item.LessonNumber);
-        AddDetail(details, "Назва пари", item.LessonName);
-        AddDetail(details, "Час", item.LessonTime);
-        AddDetail(details, "Опис", item.LessonDescription);
-        AddDetail(details, "Дисципліна", item.Title);
-        AddDetail(details, "Тип заняття", item.Type);
-        AddDetail(details, "Підгрупа", item.Half);
-        AddDetail(details, "Викладач", item.Teacher);
-        AddDetail(details, "Додаткові викладачі", item.AdditionalTeachers);
-        AddDetail(details, "Група", item.Group);
-        AddDetail(details, "Аудиторія", item.Room);
-        AddDetail(details, "Онлайн", item.Online);
-        AddDetail(details, "Коментар до посилання", item.LinkComment);
-        AddDetail(details, "Посилання", item.Link);
-        AddDetail(details, "Заміна", item.Replacement);
-        AddDetail(details, "Резервування", item.Reservation);
-        AddDetail(details, "Коментар", item.Comment);
-
-        return string.Join("\n", details);
-    }
-
     private static string BuildSummary(ScheduleItem item)
     {
         string title = FirstNonEmpty(item.Title, item.LessonDescription, item.LessonName, "Заняття");
-        return string.IsNullOrWhiteSpace(item.Type) ||
-               title.Contains($"({item.Type.Trim()})", StringComparison.OrdinalIgnoreCase)
-            ? title
-            : $"{title} ({item.Type.Trim()})";
+        List<string> parts = [title];
+
+        if (!string.IsNullOrWhiteSpace(item.Type) &&
+            !title.Contains($"({item.Type.Trim()})", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add($"({item.Type.Trim()})");
+        }
+
+        string? group = BuildGroupLabel(item);
+        if (!string.IsNullOrWhiteSpace(group))
+        {
+            parts.Add(group);
+        }
+
+        return string.Join(" ", parts);
     }
 
-    private static void AddDetail(ICollection<string> details, string label, string? value)
+    private static string? BuildGroupLabel(ScheduleItem item)
     {
-        if (!string.IsNullOrWhiteSpace(value))
+        string group = item.Group?.Trim() ?? string.Empty;
+        string half = item.Half?.Trim() ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(half) &&
+            !group.Contains(half, StringComparison.OrdinalIgnoreCase))
         {
-            details.Add($"{label}: {value.Trim()}");
+            group = string.IsNullOrWhiteSpace(group) ? half : $"{group} {half}";
         }
+
+        if (group.StartsWith('(') && LooksLikeGroup(item.ObjectName))
+        {
+            group = $"{item.ObjectName!.Trim()} {group}";
+        }
+
+        return string.IsNullOrWhiteSpace(group) ? null : group;
     }
+
+    private static bool LooksLikeGroup(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Contains('-', StringComparison.Ordinal) &&
+        value.Any(char.IsDigit);
 
     private static string CreateUid(string calendarName, int index, ScheduleItem item, DateOnly date)
     {

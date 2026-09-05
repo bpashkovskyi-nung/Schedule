@@ -43,7 +43,7 @@ public sealed class LegacyIcalGeneratorTests
     }
 
     [Fact]
-    public void Generate_should_include_all_schedule_fields_in_event_description()
+    public void Generate_should_include_only_title_group_and_location()
     {
         PsRozkladExport export = new()
         {
@@ -51,7 +51,6 @@ public sealed class LegacyIcalGeneratorTests
             [
                 new ScheduleItem
                 {
-                    ObjectName = "Група АЕ-26-1",
                     Date = "24.08.2026",
                     LessonNumber = "2",
                     LessonName = "2",
@@ -59,10 +58,9 @@ public sealed class LegacyIcalGeneratorTests
                     LessonDescription = "Математика (Пр)",
                     Title = "Математика",
                     Type = "Пр",
-                    Half = "підгр. 1",
+                    Group = "КН-26-1 (підгр. 2)",
                     Teacher = "Іваненко І.І.",
                     AdditionalTeachers = "Петренко П.П.",
-                    Group = "Потік АЕ-26-1",
                     Room = "101",
                     Online = "Так",
                     LinkComment = "Посилання для групи",
@@ -77,16 +75,12 @@ public sealed class LegacyIcalGeneratorTests
         string ical = Encoding.UTF8.GetString(new LegacyIcalGenerator().Generate(export, "Група АЕ-26-1"));
         string unfolded = ical.Replace("\r\n ", string.Empty, StringComparison.Ordinal);
 
-        unfolded.Should().Contain("SUMMARY:Математика (Пр)\r\n");
-        unfolded.Should().Contain("Об'єкт: Група АЕ-26-1\\n");
-        unfolded.Should().Contain("Номер пари: 2\\n");
-        unfolded.Should().Contain("Назва пари: 2\\n");
-        unfolded.Should().Contain("Час: 09:30-10:50\\n");
-        unfolded.Should().Contain("Тип заняття: Пр\\n");
-        unfolded.Should().Contain("Підгрупа: підгр. 1\\n");
-        unfolded.Should().Contain("Додаткові викладачі: Петренко П.П.\\n");
-        unfolded.Should().Contain("Посилання: https://meet.example/lesson\\n");
-        unfolded.Should().Contain("Резервування: Зарезервовано\\n");
+        unfolded.Should().Contain("SUMMARY:Математика (Пр) КН-26-1 (підгр. 2)\r\n");
+        unfolded.Should().Contain("LOCATION:101\r\n");
+        unfolded.Should().NotContain("DESCRIPTION:");
+        unfolded.Should().NotContain("Іваненко");
+        unfolded.Should().NotContain("https://meet.example/lesson");
+        unfolded.Should().NotContain("Заміна викладача");
     }
 
     [Fact]
