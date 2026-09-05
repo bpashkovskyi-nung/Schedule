@@ -22,6 +22,7 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
         AppendLine(calendar, "CALSCALE:GREGORIAN");
         AppendLine(calendar, "METHOD:PUBLISH");
         AppendProperty(calendar, "X-WR-CALNAME", calendarName);
+        AppendProperty(calendar, "X-WR-TIMEZONE", "Europe/Kyiv");
 
         IReadOnlyList<ScheduleItem> items = export.ScheduleItems ?? [];
         for (int index = 0; index < items.Count; index++)
@@ -33,7 +34,7 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
                 continue;
             }
 
-            string summary = FirstNonEmpty(item.Title, item.LessonDescription, item.LessonName, "Заняття");
+            string summary = BuildSummary(item);
             string description = BuildDescription(item);
 
             AppendLine(calendar, "BEGIN:VEVENT");
@@ -70,7 +71,15 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
     private static string BuildDescription(ScheduleItem item)
     {
         List<string> details = [];
+        AddDetail(details, "Об'єкт", item.ObjectName);
+        AddDetail(details, "Дата", item.Date);
+        AddDetail(details, "Номер пари", item.LessonNumber);
+        AddDetail(details, "Назва пари", item.LessonName);
+        AddDetail(details, "Час", item.LessonTime);
         AddDetail(details, "Опис", item.LessonDescription);
+        AddDetail(details, "Дисципліна", item.Title);
+        AddDetail(details, "Тип заняття", item.Type);
+        AddDetail(details, "Підгрупа", item.Half);
         AddDetail(details, "Викладач", item.Teacher);
         AddDetail(details, "Додаткові викладачі", item.AdditionalTeachers);
         AddDetail(details, "Група", item.Group);
@@ -79,9 +88,19 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
         AddDetail(details, "Коментар до посилання", item.LinkComment);
         AddDetail(details, "Посилання", item.Link);
         AddDetail(details, "Заміна", item.Replacement);
+        AddDetail(details, "Резервування", item.Reservation);
         AddDetail(details, "Коментар", item.Comment);
 
         return string.Join("\n", details);
+    }
+
+    private static string BuildSummary(ScheduleItem item)
+    {
+        string title = FirstNonEmpty(item.Title, item.LessonDescription, item.LessonName, "Заняття");
+        return string.IsNullOrWhiteSpace(item.Type) ||
+               title.Contains($"({item.Type.Trim()})", StringComparison.OrdinalIgnoreCase)
+            ? title
+            : $"{title} ({item.Type.Trim()})";
     }
 
     private static void AddDetail(ICollection<string> details, string label, string? value)
@@ -191,6 +210,45 @@ public sealed class LegacyIcalGenerator : ILegacyIcalGenerator
         .Replace(";", "\\;", StringComparison.Ordinal)
         .Replace(",", "\\,", StringComparison.Ordinal);
 
-    private static void AppendLine(StringBuilder calendar, string value) =>
-        calendar.Append(value).Append("\r\n");
+    private static void AppendLine(StringBuilder calendar, string value)
+    {
+        const int maxLineOctets = 75;
+        int offset = 0;
+        bool firstLine = true;
+
+        if (value.Length == 0)
+        {
+            calendar.Append("\r\n");
+            return;
+        }
+
+        while (offset < value.Length)
+        {
+            int maxSegmentOctets = firstLine ? maxLineOctets : maxLineOctets - 1;
+            int segmentEnd = offset;
+            int segmentOctets = 0;
+
+            while (segmentEnd < value.Length)
+            {
+                int characterCount = char.IsHighSurrogate(value[segmentEnd]) && segmentEnd + 1 < value.Length ? 2 : 1;
+                int characterOctets = Encoding.UTF8.GetByteCount(value.AsSpan(segmentEnd, characterCount));
+                if (segmentEnd > offset && segmentOctets + characterOctets > maxSegmentOctets)
+                {
+                    break;
+                }
+
+                segmentOctets += characterOctets;
+                segmentEnd += characterCount;
+            }
+
+            if (!firstLine)
+            {
+                calendar.Append(' ');
+            }
+
+            calendar.Append(value.AsSpan(offset, segmentEnd - offset)).Append("\r\n");
+            offset = segmentEnd;
+            firstLine = false;
+        }
+    }
 }
