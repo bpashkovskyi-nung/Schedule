@@ -32,6 +32,7 @@ public sealed class DekanatScheduleRepository(IPsRozkladClient client) : ISchedu
             BeginDate = beginDate,
             EndDate = endDate,
             TextFormat = ScheduleTextFormat.Separated,
+            IncludeAllStreamComponents = true,
         }, cancellationToken);
 
         return NormalizeScheduleAsync(request);
