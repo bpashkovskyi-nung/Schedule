@@ -15,21 +15,12 @@ public sealed class AuditoriumLoadItemVm
         get
         {
             string blockName = BlockName.Trim();
-            if (!int.TryParse(blockName, NumberStyles.None, CultureInfo.InvariantCulture, out int blockNumber))
+            if (!int.TryParse(blockName, NumberStyles.None, CultureInfo.InvariantCulture, out _))
             {
                 return BlockName;
             }
 
-            string noun = blockNumber % 100 is >= 11 and <= 14
-                ? "корпусів"
-                : (blockNumber % 10) switch
-                {
-                    1 => "корпус",
-                    2 or 3 or 4 => "корпуси",
-                    _ => "корпусів",
-                };
-
-            return $"{blockName} {noun}";
+            return $"{blockName} корпус";
         }
     }
 

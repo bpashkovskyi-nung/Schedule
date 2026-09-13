@@ -7,9 +7,11 @@ public sealed class AuditoriumLoadItemVmTests
 {
     [Theory]
     [InlineData("1", "1 корпус")]
-    [InlineData("2", "2 корпуси")]
-    [InlineData("5", "5 корпусів")]
-    [InlineData("11", "11 корпусів")]
+    [InlineData("2", "2 корпус")]
+    [InlineData("3", "3 корпус")]
+    [InlineData("4", "4 корпус")]
+    [InlineData("5", "5 корпус")]
+    [InlineData("11", "11 корпус")]
     [InlineData("21", "21 корпус")]
     [InlineData("1(гараж)", "1(гараж)")]
     public void BlockDisplayName_FormatsNumericBuildings(string blockName, string expected)
