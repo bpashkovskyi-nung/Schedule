@@ -230,7 +230,7 @@
                                     </div>
                                     <div class="mt-2">
                                         <div class="progress" style="height:14px">
-                                            <div class="progress-bar" style="width:@(percent)%;background-color:@item.HeatColor"></div>
+                                            <div class="progress-bar" style="width:@(percent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;background-color:@item.HeatColor"></div>
                                         </div>
                                     </div>
                                 </div>
