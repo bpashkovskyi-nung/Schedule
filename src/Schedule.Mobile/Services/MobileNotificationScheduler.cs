@@ -27,7 +27,20 @@ public sealed class MobileNotificationScheduler
         Context context = Android.App.Application.Context;
         EnsureNotificationChannel(context);
         ScheduleHourly(context);
-        RequestNotificationPermission();
+        RequestNotificationPermission(Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as Activity);
+    }
+
+    internal static void RestoreIfEnabled(Context context)
+    {
+        MobileScheduleSelection selection = new MobileScheduleSettingsStore().Load();
+        if (!selection.HasSelection || !selection.NotifyAboutNewLessons)
+        {
+            return;
+        }
+
+        EnsureNotificationChannel(context);
+        ScheduleHourly(context);
+        RequestNotificationPermission(context as Activity);
     }
 
     public void Disable()
@@ -146,10 +159,10 @@ public sealed class MobileNotificationScheduler
         manager.CreateNotificationChannel(channel);
     }
 
-    private static void RequestNotificationPermission()
+    private static void RequestNotificationPermission(Activity? activity)
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(33) ||
-            Microsoft.Maui.ApplicationModel.Platform.CurrentActivity is not Activity activity ||
+            activity is null ||
             ContextCompat.CheckSelfPermission(activity, Android.Manifest.Permission.PostNotifications) == Permission.Granted)
         {
             return;

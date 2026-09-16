@@ -47,6 +47,12 @@ public sealed class ScheduleNotificationReceiver : BroadcastReceiver
         {
             await ScheduleNotificationWorker.RunAsync(context);
         }
+        catch (Exception exception)
+        {
+            // A temporary API/network failure must not terminate the receiver
+            // before it releases the broadcast wakelock.
+            System.Diagnostics.Debug.WriteLine($"Schedule notification poll failed: {exception}");
+        }
         finally
         {
             pendingResult.Finish();

@@ -1,4 +1,3 @@
-@page "/"
 @page "/settings"
 @using System.Globalization
 @using global::Schedule.Contracts.ReferenceData
@@ -322,7 +321,7 @@
         await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
         if (ScheduleState.Result is not null)
         {
-            Navigation.NavigateTo("/schedule");
+            Navigation.NavigateTo("/");
         }
     }
 
