@@ -160,10 +160,49 @@
             .GroupBy(lesson => lesson.Date!.Value)
             .OrderBy(group => group.Key);
 
-    private IEnumerable<LessonDto> GetVisibleLessons(ScheduleResponse response) =>
-        response.Lessons
+    private IEnumerable<LessonDto> GetVisibleLessons(ScheduleResponse response)
+    {
+        DateTime now = DateTime.Now;
+        DateOnly today = DateOnly.FromDateTime(now);
+        TimeOnly currentTime = TimeOnly.FromDateTime(now);
+
+        return response.Lessons
             .Where(lesson => lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription))
-            .Where(lesson => !Selection.HidePastDates || lesson.Date!.Value >= DateOnly.FromDateTime(DateTime.Today));
+            .Where(lesson => !Selection.HidePastDates || !IsPast(lesson, today, currentTime));
+    }
+
+    private static bool IsPast(LessonDto lesson, DateOnly today, TimeOnly currentTime)
+    {
+        DateOnly lessonDate = lesson.Date!.Value;
+        if (lessonDate < today)
+        {
+            return true;
+        }
+
+        if (lessonDate > today || !TryGetEndTime(lesson.LessonTime, out TimeOnly endTime))
+        {
+            return false;
+        }
+
+        return endTime <= currentTime;
+    }
+
+    private static bool TryGetEndTime(string value, out TimeOnly endTime)
+    {
+        endTime = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        string[] parts = value.Split(['-', '–', '—'], 2, StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+               TimeOnly.TryParse(
+                   parts[1],
+                   CultureInfo.InvariantCulture,
+                   DateTimeStyles.AllowWhiteSpaces,
+                   out endTime);
+    }
 
     private static string GetLessonTitle(LessonDto lesson) =>
         FirstNonEmpty(lesson.LessonDescription, lesson.Title, lesson.LessonName, "Заняття");
