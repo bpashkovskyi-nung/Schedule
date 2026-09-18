@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Schedule.Client.Core.Api;
 using Schedule.Contracts.AuditoriumLoad;
 using Schedule.Contracts.Schedules;
-using Schedule.Contracts.Suggestions;
 using Schedule.Contracts.Workload;
 using Schedule.Web.Services;
 using Schedule.Web.ViewModels;
@@ -14,6 +13,15 @@ public sealed class HomeController(
     IScheduleQueryService scheduleQuery,
     PeriodOptionsProvider periodOptions) : Controller
 {
+    private static readonly HashSet<string> AvailableTabs =
+    [
+        "rooms",
+        "auditorium-load",
+        "teachers",
+        "groups",
+        "teaching-load",
+    ];
+
     [HttpGet]
     public IActionResult Error() => View();
 
@@ -24,7 +32,7 @@ public sealed class HomeController(
     public async Task<IActionResult> Index(string? tab, CancellationToken cancellationToken)
     {
         ScheduleIndexViewModel model = await BuildBaseModelAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(tab))
+        if (!string.IsNullOrWhiteSpace(tab) && AvailableTabs.Contains(tab))
         {
             model.ActiveTab = tab;
         }
@@ -32,10 +40,6 @@ public sealed class HomeController(
         ApplyDefaultDates(model);
         return View(model);
     }
-
-    [HttpGet]
-    public Task<IActionResult> Unified(UnifiedScheduleFormVm form, CancellationToken cancellationToken) =>
-        SearchUnifiedAsync(form, cancellationToken);
 
     [HttpGet]
     public Task<IActionResult> Rooms(RoomsScheduleFormVm form, CancellationToken cancellationToken) =>
@@ -56,21 +60,6 @@ public sealed class HomeController(
     [HttpGet]
     public Task<IActionResult> AuditoriumLoad(AuditoriumLoadFormVm form, CancellationToken cancellationToken) =>
         SearchAuditoriumLoadAsync(form, cancellationToken);
-
-    [HttpGet]
-    public async Task<IActionResult> ReloadUnifiedLists(
-        string? facultyName,
-        int course,
-        CancellationToken cancellationToken)
-    {
-        ScheduleIndexViewModel model = await BuildBaseModelAsync(cancellationToken);
-        model.ActiveTab = "main-schedule";
-        model.Unified.FacultyName = facultyName;
-        model.Unified.Course = course;
-        await PopulateUnifiedListsAsync(model, cancellationToken);
-        ApplyDefaultDates(model);
-        return View("Index", model);
-    }
 
     [HttpGet]
     public IActionResult Ical(
@@ -94,65 +83,6 @@ public sealed class HomeController(
         }
 
         return Redirect(scheduleQuery.BuildExportUrl(targetType, objectId.Trim(), beginDate, endDate));
-    }
-
-    private async Task<IActionResult> SearchUnifiedAsync(
-        UnifiedScheduleFormVm form,
-        CancellationToken cancellationToken)
-    {
-        ScheduleIndexViewModel model = await BuildBaseModelAsync(cancellationToken);
-        model.ActiveTab = "main-schedule";
-        model.Unified = form;
-
-        try
-        {
-            await PopulateUnifiedListsAsync(model, cancellationToken);
-
-            if (string.IsNullOrWhiteSpace(form.FacultyName))
-            {
-                model.ErrorMessage = "Оберіть факультет та період дат";
-                return View("Index", model);
-            }
-
-            if (string.IsNullOrEmpty(form.TeacherId) && string.IsNullOrEmpty(form.GroupId))
-            {
-                model.ErrorMessage = "Оберіть викладача або групу";
-                return View("Index", model);
-            }
-
-            if (!string.IsNullOrEmpty(form.TeacherId) && !string.IsNullOrEmpty(form.GroupId))
-            {
-                model.ErrorMessage = "Оберіть лише викладача або групу, не обидва поля";
-                return View("Index", model);
-            }
-
-            (DateOnly from, DateOnly to) = PeriodOptionsProvider.ResolveDates(
-                form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
-
-            bool isTeacher = !string.IsNullOrEmpty(form.TeacherId);
-            ScheduleTargetType targetType = isTeacher ? ScheduleTargetType.Teacher : ScheduleTargetType.Group;
-            string objectId = isTeacher ? form.TeacherId! : form.GroupId!;
-            ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
-                targetType, objectId, from, to, cancellationToken);
-
-            string title = isTeacher
-                ? ScheduleLookup.FindTeacherName(model.Reference, objectId) ?? "Викладач"
-                : ScheduleLookup.FindGroupName(model.Reference, objectId) ?? "Група";
-
-            model.Unified.Result = BuildScheduleResult(
-                response, title, form.WeeklyView, targetType, objectId, from, to);
-        }
-        catch (ScheduleApiException exception)
-        {
-            model.ErrorMessage = exception.Message;
-        }
-        catch (Exception exception)
-        {
-            model.ErrorMessage = exception.Message;
-        }
-
-        ApplyDefaultDates(model);
-        return View("Index", model);
     }
 
     private async Task<IActionResult> SearchRoomsAsync(
@@ -367,50 +297,6 @@ public sealed class HomeController(
         };
     }
 
-    private async Task PopulateUnifiedListsAsync(
-        ScheduleIndexViewModel model,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(model.Unified.FacultyName))
-        {
-            model.Unified.AvailableTeachers = [];
-            model.Unified.AvailableGroups = [];
-            return;
-        }
-
-        int facultyId = FacultyConstants.GetFacultyId(model.Unified.FacultyName);
-        if (facultyId <= 0)
-        {
-            return;
-        }
-
-        SuggestionsResponse teacherSuggestions = await scheduleQuery.GetTeacherSuggestionsAsync(
-            facultyId, cancellationToken);
-        HashSet<string> teacherNames = teacherSuggestions.Suggestions.ToHashSet(StringComparer.Ordinal);
-        model.Unified.AvailableTeachers = model.Reference.TeacherDepartments
-            .SelectMany(department => department.Entities)
-            .Where(teacher => teacherNames.Contains(teacher.FullName))
-            .OrderBy(teacher => teacher.FullName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
-
-        DepartmentVm? faculty = model.Reference.GroupDepartments
-            .FirstOrDefault(department => FacultyConstants.NormalizeFacultyName(department.Name) ==
-                                          FacultyConstants.NormalizeFacultyName(model.Unified.FacultyName));
-        if (faculty is null)
-        {
-            model.Unified.AvailableGroups = [];
-            return;
-        }
-
-        SuggestionsResponse groupSuggestions = await scheduleQuery.GetGroupSuggestionsAsync(
-            facultyId, model.Unified.Course, cancellationToken);
-        HashSet<string> groupNames = groupSuggestions.Suggestions.ToHashSet(StringComparer.Ordinal);
-        model.Unified.AvailableGroups = faculty.Entities
-            .Where(group => model.Unified.Course <= 0 || groupNames.Count == 0 || groupNames.Contains(group.Name))
-            .OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
-    }
-
     private ScheduleResultVm BuildScheduleResult(
         ScheduleResponse response,
         string title,
@@ -451,7 +337,6 @@ public sealed class HomeController(
             }
         }
 
-        Apply(model.Unified);
         Apply(model.Rooms);
         Apply(model.Teachers);
         Apply(model.Groups);

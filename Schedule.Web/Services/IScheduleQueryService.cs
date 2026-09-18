@@ -1,6 +1,5 @@
 using Schedule.Contracts.AuditoriumLoad;
 using Schedule.Contracts.Schedules;
-using Schedule.Contracts.Suggestions;
 using Schedule.Contracts.Workload;
 
 namespace Schedule.Web.Services;
@@ -12,15 +11,6 @@ public interface IScheduleQueryService
         string objectId,
         DateOnly beginDate,
         DateOnly endDate,
-        CancellationToken cancellationToken = default);
-
-    Task<SuggestionsResponse> GetTeacherSuggestionsAsync(
-        int facultyId,
-        CancellationToken cancellationToken = default);
-
-    Task<SuggestionsResponse> GetGroupSuggestionsAsync(
-        int facultyId,
-        int course,
         CancellationToken cancellationToken = default);
 
     Task<TeachingLoadResponse> GetTeachingLoadAsync(

@@ -22,112 +22,39 @@
 
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "main-schedule" ? "active" : "")" href="@Url.Content("~/")?tab=main-schedule" role="tab">
-                <i class="bi bi-calendar3"></i> Розклад занять
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "rooms" ? "active" : "")" href="@Url.Content("~/")?tab=rooms" role="tab">
+            <a class="nav-link @(Model.ActiveTab == "rooms" ? "active" : "")" href="@Url.Content("~/")?tab=rooms" data-schedule-tab="rooms" role="tab">
                 <i class="bi bi-building"></i> Аудиторії
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "auditorium-load" ? "active" : "")" href="@Url.Content("~/")?tab=auditorium-load" role="tab">
+            <a class="nav-link @(Model.ActiveTab == "auditorium-load" ? "active" : "")" href="@Url.Content("~/")?tab=auditorium-load" data-schedule-tab="auditorium-load" role="tab">
                 <i class="bi bi-bar-chart"></i> Завантаження аудиторій
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "teachers" ? "active" : "")" href="@Url.Content("~/")?tab=teachers" role="tab">
+            <a class="nav-link @(Model.ActiveTab == "teachers" ? "active" : "")" href="@Url.Content("~/")?tab=teachers" data-schedule-tab="teachers" role="tab">
                 <i class="bi bi-person-badge"></i> Викладачі
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "groups" ? "active" : "")" href="@Url.Content("~/")?tab=groups" role="tab">
+            <a class="nav-link @(Model.ActiveTab == "groups" ? "active" : "")" href="@Url.Content("~/")?tab=groups" data-schedule-tab="groups" role="tab">
                 <i class="bi bi-people"></i> Групи
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link @(Model.ActiveTab == "teaching-load" ? "active" : "")" href="@Url.Content("~/")?tab=teaching-load" role="tab">
+            <a class="nav-link @(Model.ActiveTab == "teaching-load" ? "active" : "")" href="@Url.Content("~/")?tab=teaching-load" data-schedule-tab="teaching-load" role="tab">
                 <i class="bi bi-graph-up"></i> Навчальне навантаження
             </a>
         </li>
     </ul>
 
     <div class="tab-content">
-    @if (Model.ActiveTab == "main-schedule")
-    {
-        <div class="tab-pane show active" id="main-schedule">
-            <div class="card">
-                <div class="card-body">
-                    <form id="unifiedForm" asp-action="Unified" method="get">
-                        <div class="form-row">
-                            <div class="form-group mb-3">
-                                <label class="form-label" for="unifiedFaculty">Факультет</label>
-                                <select class="form-select" id="unifiedFaculty" name="FacultyName" required>
-                                    <option value="">Оберіть факультет</option>
-                                    @foreach (DepartmentVm faculty in Model.Reference.GroupDepartments)
-                                    {
-                                        @await Html.PartialAsync("_Option", (faculty.Name, faculty.Name, Model.Unified.FacultyName == faculty.Name))
-                                    }
-                                </select>
-                            </div>
-                            <div class="form-group mb-3">
-                                <label class="form-label" for="unifiedCourse">Курс</label>
-                                <select class="form-select" id="unifiedCourse" name="Course">
-                                    @foreach ((int Value, string Label) course in Model.CourseOptions)
-                                    {
-                                        @await Html.PartialAsync("_Option", (course.Value.ToString(), course.Label, Model.Unified.Course == course.Value))
-                                    }
-                                </select>
-                            </div>
-                            <div class="form-group mb-3">
-                                <label class="form-label" for="unifiedTeacher">Викладач</label>
-                                <select class="form-select" id="unifiedTeacher" name="TeacherId" @(string.IsNullOrEmpty(Model.Unified.FacultyName) ? "disabled" : null)>
-                                    <option value="">Не обрано</option>
-                                    @foreach (ScheduleEntityVm teacher in Model.Unified.AvailableTeachers)
-                                    {
-                                        @await Html.PartialAsync("_Option", (teacher.Id, teacher.FullName, Model.Unified.TeacherId == teacher.Id))
-                                    }
-                                </select>
-                            </div>
-                            <div class="form-group mb-3">
-                                <label class="form-label" for="unifiedGroup">Група</label>
-                                <select class="form-select" id="unifiedGroup" name="GroupId" @(string.IsNullOrEmpty(Model.Unified.FacultyName) ? "disabled" : null)>
-                                    <option value="">Не обрано</option>
-                                    @foreach (ScheduleEntityVm group in Model.Unified.AvailableGroups)
-                                    {
-                                        @await Html.PartialAsync("_Option", (group.Id, group.Name, Model.Unified.GroupId == group.Id))
-                                    }
-                                </select>
-                            </div>
-                            @{
-                                ViewData["Prefix"] = "unified";
-                                ViewData["PeriodId"] = "unifiedPeriod";
-                                ViewData["FromId"] = "unifiedFrom";
-                                ViewData["ToId"] = "unifiedTo";
-                                ViewData["PeriodOptions"] = Model.PeriodOptions;
-                            }
-                            @await Html.PartialAsync("_PeriodFields", Model.Unified)
-                            <div class="form-group mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="unifiedWeekly" @(Model.Unified.WeeklyView ? "checked" : null) />
-                                    <label class="form-check-label" for="unifiedWeekly">Тижневий вигляд</label>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Показати розклад занять</button>
-                    </form>
-                </div>
-            </div>
-            @await Html.PartialAsync("_ScheduleResult", Model.Unified.Result)
-        </div>
-    }
-    else if (Model.ActiveTab == "rooms")
+    @if (Model.ActiveTab == "rooms")
     {
         <div class="tab-pane show active" id="rooms">
             <div class="card">
                 <div class="card-body">
-                    <form id="roomsForm" asp-action="Rooms" method="get">
+                    <form id="roomsForm" data-schedule-form="rooms" asp-action="Rooms" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="roomsBlock">Корпус</label>
@@ -175,7 +102,7 @@
         <div class="tab-pane show active" id="auditorium-load">
             <div class="card">
                 <div class="card-body">
-                    <form id="auditoriumsForm" asp-action="AuditoriumLoad" method="get">
+                    <form id="auditoriumsForm" data-schedule-form="auditorium-load" asp-action="AuditoriumLoad" method="get">
                         <div class="form-row auditoriums-load-form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="auditoriumsBlock">Корпус</label>
@@ -246,7 +173,7 @@
         <div class="tab-pane show active" id="teachers">
             <div class="card">
                 <div class="card-body">
-                    <form id="teachersForm" asp-action="Teachers" method="get">
+                    <form id="teachersForm" data-schedule-form="teachers" asp-action="Teachers" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="teachersDept">Підрозділ</label>
@@ -294,7 +221,7 @@
         <div class="tab-pane show active" id="groups">
             <div class="card">
                 <div class="card-body">
-                    <form id="groupsForm" asp-action="Groups" method="get">
+                    <form id="groupsForm" data-schedule-form="groups" asp-action="Groups" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="groupsDept">Підрозділ</label>
@@ -342,7 +269,7 @@
         <div class="tab-pane show active" id="teaching-load">
             <div class="card">
                 <div class="card-body">
-                    <form id="teachingLoadForm" asp-action="TeachingLoad" method="get">
+                    <form id="teachingLoadForm" data-schedule-form="teaching-load" asp-action="TeachingLoad" method="get">
                         <div class="form-row">
                             <div class="form-group mb-3">
                                 <label class="form-label" for="teachingLoadDept">Підрозділ</label>
