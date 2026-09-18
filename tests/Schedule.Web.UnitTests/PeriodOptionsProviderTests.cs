@@ -3,7 +3,7 @@ using Schedule.Web.Services;
 using Schedule.Web.ViewModels;
 using Xunit;
 
-namespace Schedule.UnitTests;
+namespace Schedule.Web.UnitTests;
 
 public sealed class PeriodOptionsProviderTests
 {

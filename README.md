@@ -20,7 +20,7 @@ API може використовувати `Dekanat` або `Database` як д�
 Проєкти:
 
 - `Schedule.Web/Schedule.Web.csproj`
-- `Schedule.UnitTests/Schedule.UnitTests.csproj`
+- `tests/Schedule.Web.UnitTests/Schedule.Web.UnitTests.csproj`
 - `src/Schedule.Api/Schedule.Api.csproj`
 - `src/Schedule.Contracts/Schedule.Contracts.csproj`
 - `src/Schedule.Client.Core/Schedule.Client.Core.csproj`
