@@ -2,180 +2,549 @@
 @page "/schedule"
 @inject IScheduleApiClient ApiClient
 @inject ReferenceDataState ReferenceState
-@inject ScheduleState ScheduleState
 
 <PageTitle>Розклад занять</PageTitle>
 
-<div class="page-heading">
-    <div>
-        <p class="eyebrow">Schedule</p>
-        <h1>Розклад занять</h1>
-        <p class="muted">Оберіть групу, викладача або аудиторію та період.</p>
-    </div>
+<div class="schedule-container">
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <ErrorAlert Message="@errorMessage" />
+    }
+
+    <nav class="legacy-tabs" aria-label="Розділи розкладу">
+        @foreach ((string Key, string Label, string Icon) tab in Tabs)
+        {
+            <a class="legacy-tab @(CurrentTab == tab.Key ? "is-active" : string.Empty)" href="/?tab=@tab.Key">
+                <span class="legacy-tab__icon" aria-hidden="true">@tab.Icon</span> @tab.Label
+            </a>
+        }
+    </nav>
+
+    @if (ReferenceState.IsLoading)
+    {
+        <LoadingIndicator Message="Завантаження довідників…" />
+    }
+    else if (ReferenceState.Data is null)
+    {
+        <ErrorAlert Message="@(ReferenceState.ErrorMessage ?? "Не вдалося завантажити довідники.")" />
+    }
+    else if (CurrentTab == "main-schedule")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadMainScheduleAsync" @onsubmit:preventDefault>
+                <div class="form-grid">
+                    <label>
+                        Факультет
+                        <select value="@mainFacultyId" @onchange="HandleMainFacultyChanged" required>
+                            <option value="0">Оберіть факультет</option>
+                            @foreach (DepartmentDto faculty in FacultyDepartments)
+                            {
+                                <option value="@GetFacultyId(faculty.Name)">@faculty.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Курс
+                        <select value="@mainCourse" @onchange="HandleMainCourseChanged">
+                            @foreach ((int Value, string Label) course in CourseOptions)
+                            {
+                                <option value="@course.Value">@course.Label</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Викладач
+                        <select @bind="mainTeacherId" disabled="@(mainTeacherSuggestions.Count == 0)">
+                            <option value="">Не обрано</option>
+                            @foreach (ScheduleEntityDto teacher in mainTeacherSuggestions)
+                            {
+                                <option value="@teacher.Id">@teacher.FullName</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Група
+                        <select @bind="mainGroupId" disabled="@(mainGroupSuggestions.Count == 0)">
+                            <option value="">Не обрано</option>
+                            @foreach (ScheduleEntityDto group in mainGroupSuggestions)
+                            {
+                                <option value="@group.Id">@group.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Тип розкладу
+                        <select @bind="mainTarget">
+                            <option value="teacher">Викладач</option>
+                            <option value="group">Група</option>
+                        </select>
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="mainPeriod" ShowWeekly="true" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Завантаження…" : "Показати розклад занять")
+                </button>
+            </form>
+        </section>
+        @if (scheduleResult is not null)
+        {
+            <ScheduleResult Result="scheduleResult" WeeklyView="mainPeriod.WeeklyView" ExportUrl="@icalUrl" />
+        }
+    }
+    else if (CurrentTab == "rooms")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadRoomScheduleAsync" @onsubmit:preventDefault>
+                <div class="form-grid">
+                    <label>
+                        Корпус
+                        <select value="@roomBuilding" @onchange="HandleRoomBuildingChanged" required>
+                            <option value="">Оберіть корпус</option>
+                            @foreach (BuildingDto building in ReferenceState.Data.Buildings.OrderBy(x => x.Name))
+                            {
+                                <option value="@building.Name">@building.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Аудиторія
+                        <select @bind="roomId" disabled="@(RoomOptions.Count == 0)" required>
+                            <option value="">Оберіть аудиторію</option>
+                            @foreach (ScheduleEntityDto room in RoomOptions)
+                            {
+                                <option value="@room.Id">@room.Name</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="roomPeriod" ShowWeekly="true" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Завантаження…" : "Знайти розклад")
+                </button>
+            </form>
+        </section>
+        @if (scheduleResult is not null)
+        {
+            <ScheduleResult Result="scheduleResult" WeeklyView="roomPeriod.WeeklyView" ExportUrl="@icalUrl" />
+        }
+    }
+    else if (CurrentTab == "auditorium-load")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadAuditoriumLoadAsync" @onsubmit:preventDefault>
+                <div class="form-grid auditoriums-load-form-grid">
+                    <label>
+                        Корпус
+                        <select @bind="loadBuilding">
+                            <option value="">Усі корпуси</option>
+                            @foreach (BuildingDto building in ReferenceState.Data.Buildings.OrderBy(x => x.Name))
+                            {
+                                <option value="@building.Name">@building.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Пари від
+                        <input type="number" min="1" @bind="pairsFrom" />
+                    </label>
+                    <label>
+                        Пари до
+                        <input type="number" min="1" @bind="pairsTo" />
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="loadPeriod" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Розрахунок…" : "Порахувати завантаження")
+                </button>
+            </form>
+        </section>
+        @if (auditoriumResult is not null)
+        {
+            <section class="legacy-card load-result">
+                <div class="result-heading">
+                    <div>
+                        <p class="eyebrow">Результат</p>
+                        <h2>Завантаження аудиторій</h2>
+                    </div>
+                    <span class="period-label">@auditoriumResult.WorkingDays робочих днів · @auditoriumResult.PossiblePairsPerRoom можливих пар</span>
+                </div>
+                @if (auditoriumResult.Items.Count == 0)
+                {
+                    <p class="muted">Дані про завантаження не знайдені.</p>
+                }
+                else
+                {
+                    <div class="load-list">
+                        @foreach (AuditoriumLoadItemDto item in auditoriumResult.Items)
+                        {
+                            double percent = Math.Clamp(item.Percent, 0, 100);
+                            <article class="load-item">
+                                <div class="load-item__heading">
+                                    <div><strong>@item.RoomName</strong><small>@item.BuildingName</small></div>
+                                    <div class="load-item__value"><strong>@percent.ToString("0.0")%</strong><small>@item.ActualPairs/@item.PossiblePairs пар</small></div>
+                                </div>
+                                <div class="load-bar"><span style="width:@percent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    }
+    else if (CurrentTab == "teachers")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadTeacherScheduleAsync" @onsubmit:preventDefault>
+                <div class="form-grid">
+                    <label>
+                        Підрозділ
+                        <select value="@teacherDepartment" @onchange="HandleTeacherDepartmentChanged" required>
+                            <option value="">Оберіть підрозділ</option>
+                            @foreach (DepartmentDto department in ReferenceState.Data.TeacherDepartments.OrderBy(x => x.Name))
+                            {
+                                <option value="@department.Name">@department.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Викладач
+                        <select @bind="teacherId" disabled="@(TeacherOptions.Count == 0)" required>
+                            <option value="">Оберіть викладача</option>
+                            @foreach (ScheduleEntityDto teacher in TeacherOptions)
+                            {
+                                <option value="@teacher.Id">@teacher.FullName</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="teacherPeriod" ShowWeekly="true" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Завантаження…" : "Знайти розклад")
+                </button>
+            </form>
+        </section>
+        @if (scheduleResult is not null)
+        {
+            <ScheduleResult Result="scheduleResult" WeeklyView="teacherPeriod.WeeklyView" ExportUrl="@icalUrl" />
+        }
+    }
+    else if (CurrentTab == "groups")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadGroupScheduleAsync" @onsubmit:preventDefault>
+                <div class="form-grid">
+                    <label>
+                        Факультет
+                        <select value="@groupFacultyId" @onchange="HandleGroupFacultyChanged" required>
+                            <option value="0">Оберіть факультет</option>
+                            @foreach (DepartmentDto faculty in FacultyDepartments)
+                            {
+                                <option value="@GetFacultyId(faculty.Name)">@faculty.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Група
+                        <select @bind="groupId" disabled="@(GroupOptions.Count == 0)" required>
+                            <option value="">Оберіть групу</option>
+                            @foreach (ScheduleEntityDto group in GroupOptions)
+                            {
+                                <option value="@group.Id">@group.Name</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="groupPeriod" ShowWeekly="true" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Завантаження…" : "Знайти розклад")
+                </button>
+            </form>
+        </section>
+        @if (scheduleResult is not null)
+        {
+            <ScheduleResult Result="scheduleResult" WeeklyView="groupPeriod.WeeklyView" ExportUrl="@icalUrl" />
+        }
+    }
+    else if (CurrentTab == "teaching-load")
+    {
+        <section class="legacy-card">
+            <form class="legacy-form" @onsubmit="LoadTeachingLoadAsync" @onsubmit:preventDefault>
+                <div class="form-grid">
+                    <label class="form-grid__wide">
+                        Підрозділ
+                        <select @bind="loadDepartment" required>
+                            <option value="">Оберіть підрозділ</option>
+                            @foreach (DepartmentDto department in ReferenceState.Data.TeacherDepartments.OrderBy(x => x.Name))
+                            {
+                                <option value="@department.Name">@department.Name</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <SchedulePeriodSelector Value="teachingPeriod" />
+                <button class="primary-button primary-button--wide" type="submit" disabled="@isLoading">
+                    @(isLoading ? "Розрахунок…" : "Порахувати навантаження")
+                </button>
+            </form>
+        </section>
+        @if (teachingResult is not null)
+        {
+            <section class="legacy-card result-table">
+                <div class="result-heading">
+                    <div><p class="eyebrow">Результат</p><h2>Викладачі</h2></div>
+                    <span class="period-label">@teachingResult.Rows.Count викладачів</span>
+                </div>
+                <div class="table-scroll">
+                    <table>
+                        <thead><tr><th>Викладач</th>@foreach (string type in teachingResult.SessionTypes) { <th>@type</th> }<th>Всього</th></tr></thead>
+                        <tbody>
+                            @foreach (TeachingLoadRowDto row in teachingResult.Rows)
+                            {
+                                <tr><td><strong>@row.TeacherName</strong></td>@foreach (string type in teachingResult.SessionTypes) { <td>@row.HoursByType.GetValueOrDefault(type)</td> }<td><strong>@row.TotalHours</strong></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    }
 </div>
 
-@if (ReferenceState.IsLoading)
-{
-    <LoadingIndicator Message="Завантаження довідників…" />
-}
-else if (ReferenceState.Data is null)
-{
-    <ErrorAlert Message="@(ReferenceState.ErrorMessage ?? "Не вдалося завантажити довідники.")" />
-}
-else
-{
-    <section class="search-panel">
-        <div class="form-grid">
-            <label>
-                Тип пошуку
-                <select @bind="TargetType">
-                    <option value="@ScheduleTargetType.Group">Група</option>
-                    <option value="@ScheduleTargetType.Teacher">Викладач</option>
-                    <option value="@ScheduleTargetType.Room">Аудиторія</option>
-                </select>
-            </label>
-
-            <label class="form-grid__wide">
-                Об’єкт
-                <input type="search" placeholder="Фільтр за назвою…" @bind="objectFilter" @bind:event="oninput" />
-                <select @bind="selectedObjectId">
-                    <option value="">Оберіть об’єкт</option>
-                    @foreach (EntityGroup entityGroup in CurrentEntityGroups)
-                    {
-                        IReadOnlyList<ScheduleEntityDto> entities = GetFilteredEntities(entityGroup.Entities);
-                        if (entities.Count > 0)
-                        {
-                            <optgroup label="@entityGroup.Name">
-                                @foreach (ScheduleEntityDto entity in entities)
-                                {
-                                    <option value="@entity.Id">@GetEntityLabel(entity)</option>
-                                }
-                            </optgroup>
-                        }
-                    }
-                </select>
-            </label>
-
-            <label>
-                Від дати
-                <input type="date" @bind="fromDate" />
-            </label>
-
-            <label>
-                До дати
-                <input type="date" @bind="toDate" />
-            </label>
-
-            <label class="checkbox-field">
-                <span>Вигляд</span>
-                <span class="checkbox-field__control">
-                    <input type="checkbox" @bind="weeklyView" />
-                    Показувати тижнями
-                </span>
-            </label>
-        </div>
-
-        <div class="search-actions">
-            <button class="primary-button" type="button" @onclick="LoadScheduleAsync" disabled="@ScheduleState.IsLoading">
-                @(ScheduleState.IsLoading ? "Завантаження…" : "Показати розклад")
-            </button>
-            @if (ScheduleState.Result is not null && !string.IsNullOrWhiteSpace(selectedObjectId))
-            {
-                <a class="secondary-button" href="@GetIcalUri()" target="_blank" rel="noopener">Експорт iCal</a>
-            }
-        </div>
-    </section>
-
-    <ErrorAlert Message="@validationMessage" />
-    <ErrorAlert Message="@ScheduleState.ErrorMessage" />
-
-    @if (ScheduleState.IsLoading)
-    {
-        <LoadingIndicator />
-    }
-    else if (ScheduleState.Result is not null)
-    {
-        <ScheduleResult Result="@ScheduleState.Result" WeeklyView="@weeklyView" />
-    }
-}
-
 @code {
-    private ScheduleTargetType targetType = ScheduleTargetType.Group;
-    private string selectedObjectId = string.Empty;
-    private DateOnly fromDate = DateOnly.FromDateTime(DateTime.Today);
-    private DateOnly toDate = DateOnly.FromDateTime(DateTime.Today.AddDays(6));
-    private bool weeklyView;
-    private string? validationMessage;
-    private string objectFilter = string.Empty;
+    private static readonly IReadOnlyList<(string Key, string Label, string Icon)> Tabs =
+    [
+        ("main-schedule", "Розклад занять", "▣"),
+        ("rooms", "Аудиторії", "⌂"),
+        ("auditorium-load", "Завантаження аудиторій", "▥"),
+        ("teachers", "Викладачі", "▤"),
+        ("groups", "Групи", "♧"),
+        ("teaching-load", "Навчальне навантаження", "▦"),
+    ];
 
-    private ScheduleTargetType TargetType
+    private static readonly IReadOnlyList<(int Value, string Label)> CourseOptions =
+    [
+        (0, "Усі курси"), (1, "1 курс"), (2, "2 курс"), (3, "3 курс"), (4, "4 курс"), (5, "5 курс"), (6, "6 курс"),
+    ];
+
+    private static readonly IReadOnlyDictionary<string, int> FacultyIds = new Dictionary<string, int>(StringComparer.Ordinal)
     {
-        get => targetType;
-        set
+        ["Інститут гуманітарної підготовки та державного управління"] = 1001,
+        ["Інститут нафтогазової інженерії"] = 1002,
+        ["Інститут інженерної механіки та робототехніки"] = 1003,
+        ["Факультет природничих наук"] = 1006,
+        ["Інститут економіки та менеджменту"] = 1007,
+        ["Інститут післядипломної освіти"] = 1011,
+        ["Відділ аспірантури і докторантури"] = 1012,
+        ["Центр міжнародної освіти"] = 1013,
+        ["Факультет інформаційних технологій"] = 1015,
+        ["Факультет автоматизації та енергетики"] = 1016,
+        ["Інститут архітектури та будівництва 'ІФНТУНГ-ДонНАБА'"] = 1017,
+    };
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? Tab { get; set; }
+
+    private string CurrentTab => Tabs.Any(x => x.Key == Tab) ? Tab! : "teachers";
+    private IReadOnlyList<DepartmentDto> FacultyDepartments => ReferenceState.Data?.GroupDepartments ?? [];
+
+    private int mainFacultyId;
+    private int mainCourse;
+    private string mainTarget = "teacher";
+    private string mainTeacherId = string.Empty;
+    private string mainGroupId = string.Empty;
+    private List<ScheduleEntityDto> mainTeacherSuggestions = [];
+    private List<ScheduleEntityDto> mainGroupSuggestions = [];
+    private readonly PeriodSelection mainPeriod = new();
+
+    private string roomBuilding = string.Empty;
+    private string roomId = string.Empty;
+    private IReadOnlyList<ScheduleEntityDto> RoomOptions => ReferenceState.Data?.Buildings.FirstOrDefault(x => x.Name == roomBuilding)?.Rooms.OrderBy(x => x.Name).ToList() ?? [];
+    private readonly PeriodSelection roomPeriod = new();
+
+    private string loadBuilding = string.Empty;
+    private int pairsFrom = 1;
+    private int pairsTo = 8;
+    private readonly PeriodSelection loadPeriod = new();
+
+    private string teacherDepartment = string.Empty;
+    private string teacherId = string.Empty;
+    private IReadOnlyList<ScheduleEntityDto> TeacherOptions => ReferenceState.Data?.TeacherDepartments.FirstOrDefault(x => x.Name == teacherDepartment)?.Entities.OrderBy(x => x.FullName).ToList() ?? [];
+    private readonly PeriodSelection teacherPeriod = new();
+
+    private int groupFacultyId;
+    private string groupId = string.Empty;
+    private IReadOnlyList<ScheduleEntityDto> GroupOptions => ReferenceState.Data?.GroupDepartments.FirstOrDefault(x => GetFacultyId(x.Name) == groupFacultyId)?.Entities.OrderBy(x => x.Name).ToList() ?? [];
+    private readonly PeriodSelection groupPeriod = new();
+
+    private string loadDepartment = string.Empty;
+    private readonly PeriodSelection teachingPeriod = new();
+
+    private bool isLoading;
+    private string? errorMessage;
+    private ScheduleResponse? scheduleResult;
+    private AuditoriumLoadResponse? auditoriumResult;
+    private TeachingLoadResponse? teachingResult;
+    private string? icalUrl;
+
+    protected override async Task OnInitializedAsync() => await ReferenceState.EnsureLoadedAsync(ApiClient);
+
+    private async Task HandleMainFacultyChanged(ChangeEventArgs args)
+    {
+        mainFacultyId = ParseInt(args.Value);
+        mainTeacherId = string.Empty;
+        mainGroupId = string.Empty;
+        await LoadMainSuggestionsAsync();
+    }
+
+    private async Task HandleMainCourseChanged(ChangeEventArgs args)
+    {
+        mainCourse = ParseInt(args.Value);
+        mainGroupId = string.Empty;
+        await LoadMainSuggestionsAsync(loadTeachers: false);
+    }
+
+    private async Task LoadMainSuggestionsAsync(bool loadTeachers = true)
+    {
+        mainTeacherSuggestions = [];
+        mainGroupSuggestions = [];
+        if (mainFacultyId <= 0) return;
+
+        try
         {
-            if (targetType == value) return;
-
-            targetType = value;
-            selectedObjectId = string.Empty;
-            objectFilter = string.Empty;
-            validationMessage = null;
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await ReferenceState.EnsureLoadedAsync(ApiClient);
-    }
-
-    private IReadOnlyList<EntityGroup> CurrentEntityGroups
-    {
-        get
-        {
-            if (ReferenceState.Data is null) return [];
-
-            return targetType switch
-            {
-                ScheduleTargetType.Teacher => ReferenceState.Data.TeacherDepartments
-                    .Select(x => new EntityGroup(x.Name, x.Entities)).ToList(),
-                ScheduleTargetType.Room => ReferenceState.Data.Buildings
-                    .Select(x => new EntityGroup(x.Name, x.Rooms)).ToList(),
-                _ => ReferenceState.Data.GroupDepartments
-                    .Select(x => new EntityGroup(x.Name, x.Entities)).ToList(),
-            };
-        }
-    }
-
-    private IReadOnlyList<ScheduleEntityDto> GetFilteredEntities(IReadOnlyList<ScheduleEntityDto> entities) =>
-        string.IsNullOrWhiteSpace(objectFilter)
-            ? entities
-            : entities
-                .Where(entity => GetEntityLabel(entity).Contains(objectFilter, StringComparison.OrdinalIgnoreCase))
+            Task<SuggestionsResponse> teachers = loadTeachers ? ApiClient.GetTeacherSuggestionsAsync(mainFacultyId) : Task.FromResult(new SuggestionsResponse { Suggestions = [] });
+            Task<SuggestionsResponse> groups = ApiClient.GetGroupSuggestionsAsync(mainFacultyId, mainCourse);
+            await Task.WhenAll(teachers, groups);
+            HashSet<string> teacherNames = (await teachers).Suggestions.ToHashSet(StringComparer.Ordinal);
+            HashSet<string> groupNames = (await groups).Suggestions.ToHashSet(StringComparer.Ordinal);
+            mainTeacherSuggestions = ReferenceState.Data!.TeacherDepartments
+                .SelectMany(department => department.Entities)
+                .Where(teacher => teacherNames.Contains(teacher.FullName))
+                .OrderBy(teacher => teacher.FullName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
-
-    private string GetEntityLabel(ScheduleEntityDto entity) =>
-        targetType == ScheduleTargetType.Teacher ? entity.FullName : entity.Name;
-
-    private async Task LoadScheduleAsync()
-    {
-        validationMessage = null;
-
-        if (string.IsNullOrWhiteSpace(selectedObjectId))
-        {
-            validationMessage = "Оберіть групу, викладача або аудиторію.";
-            return;
+            mainGroupSuggestions = ReferenceState.Data!.GroupDepartments
+                .Where(department => GetFacultyId(department.Name) == mainFacultyId)
+                .SelectMany(department => department.Entities)
+                .Where(group => mainCourse <= 0 || groupNames.Count == 0 || groupNames.Contains(group.Name))
+                .OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
         }
-
-        if (fromDate > toDate)
+        catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException)
         {
-            validationMessage = "Дата початку не може бути пізнішою за дату завершення.";
-            return;
+            errorMessage = exception.Message;
         }
-
-        await ScheduleState.LoadAsync(ApiClient, targetType, selectedObjectId, fromDate, toDate);
     }
 
-    private string GetIcalUri() =>
-        ApiClient.GetIcalUri(targetType, selectedObjectId, fromDate, toDate).ToString();
+    private void HandleRoomBuildingChanged(ChangeEventArgs args)
+    {
+        roomBuilding = args.Value?.ToString() ?? string.Empty;
+        roomId = string.Empty;
+    }
 
-    private sealed record EntityGroup(string Name, IReadOnlyList<ScheduleEntityDto> Entities);
+    private void HandleTeacherDepartmentChanged(ChangeEventArgs args)
+    {
+        teacherDepartment = args.Value?.ToString() ?? string.Empty;
+        teacherId = string.Empty;
+    }
+
+    private async Task HandleGroupFacultyChanged(ChangeEventArgs args)
+    {
+        groupFacultyId = ParseInt(args.Value);
+        groupId = string.Empty;
+        if (groupFacultyId <= 0) return;
+        try
+        {
+            // The reference response already contains the complete group list. This call keeps the behavior aligned with the legacy cascading selector.
+            await Task.CompletedTask;
+        }
+        catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException)
+        {
+            errorMessage = exception.Message;
+        }
+    }
+
+    private async Task LoadMainScheduleAsync()
+    {
+        string objectId = mainTarget == "teacher" ? mainTeacherId : mainGroupId;
+        ScheduleTargetType targetType = mainTarget == "teacher" ? ScheduleTargetType.Teacher : ScheduleTargetType.Group;
+        await LoadScheduleAsync(targetType, objectId, mainPeriod);
+    }
+
+    private Task LoadRoomScheduleAsync() => LoadScheduleAsync(ScheduleTargetType.Room, roomId, roomPeriod);
+    private Task LoadTeacherScheduleAsync() => LoadScheduleAsync(ScheduleTargetType.Teacher, teacherId, teacherPeriod);
+    private Task LoadGroupScheduleAsync() => LoadScheduleAsync(ScheduleTargetType.Group, groupId, groupPeriod);
+
+    private async Task LoadScheduleAsync(ScheduleTargetType targetType, string objectId, PeriodSelection period)
+    {
+        if (string.IsNullOrWhiteSpace(objectId))
+        {
+            errorMessage = "Оберіть об’єкт розкладу.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        scheduleResult = null;
+        icalUrl = null;
+        try
+        {
+            scheduleResult = await ApiClient.GetScheduleAsync(targetType, objectId, period.FromDate, period.ToDate);
+            icalUrl = ApiClient.GetIcalUri(targetType, objectId, period.FromDate, period.ToDate).ToString();
+        }
+        catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadAuditoriumLoadAsync()
+    {
+        if (pairsFrom < 1 || pairsTo < pairsFrom)
+        {
+            errorMessage = "Діапазон пар некоректний.";
+            return;
+        }
+
+        await RunAsync(async () => auditoriumResult = await ApiClient.GetAuditoriumLoadAsync(loadBuilding, loadPeriod.FromDate, loadPeriod.ToDate, pairsFrom, pairsTo));
+    }
+
+    private async Task LoadTeachingLoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(loadDepartment))
+        {
+            errorMessage = "Оберіть підрозділ.";
+            return;
+        }
+
+        await RunAsync(async () => teachingResult = await ApiClient.GetTeachingLoadAsync(loadDepartment, teachingPeriod.FromDate, teachingPeriod.ToDate));
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        isLoading = true;
+        errorMessage = null;
+        auditoriumResult = null;
+        teachingResult = null;
+        try { await action(); }
+        catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException) { errorMessage = exception.Message; }
+        finally { isLoading = false; }
+    }
+
+    private static int GetFacultyId(string name)
+    {
+        string normalizedName = NormalizeFacultyName(name);
+        return FacultyIds.FirstOrDefault(pair => NormalizeFacultyName(pair.Key) == normalizedName).Value;
+    }
+
+    private static string NormalizeFacultyName(string name) => name
+        .Replace('\u2018', '\'')
+        .Replace('\u2019', '\'')
+        .Replace('\u2032', '\'')
+        .Replace('`', '\'')
+        .Trim();
+
+    private static int ParseInt(object? value) => int.TryParse(value?.ToString(), out int result) ? result : 0;
 }

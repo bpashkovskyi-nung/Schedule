@@ -1,44 +1,32 @@
 .app-shell {
     min-height: 100vh;
     color: #172033;
-    background: #f5f7fb;
+    background: #f5f7fa;
 }
 
-.app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem max(1rem, calc((100vw - 1120px) / 2));
-    background: #12345b;
-    color: #fff;
-}
-
-.brand,
-.app-header a {
-    color: inherit;
+.app-footer a {
+    color: #1769e0;
     text-decoration: none;
 }
 
-.brand {
-    font-size: 1.15rem;
-    font-weight: 700;
-}
-
-.app-header nav {
-    display: flex;
-    gap: 1rem;
-}
-
 .app-main {
-    width: min(1120px, calc(100% - 2rem));
+    width: min(1400px, calc(100% - 2rem));
     margin: 0 auto;
-    padding: 2rem 0 3rem;
+    padding: 1.5rem 0 2rem;
+}
+
+.app-footer {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-top: 1px solid #dce4ec;
+    color: #64748b;
+    font-size: .85rem;
 }
 
 @media (max-width: 640px) {
-    .app-header {
-        align-items: flex-start;
-        flex-direction: column;
+    .app-footer {
+        flex-wrap: wrap;
     }
 }

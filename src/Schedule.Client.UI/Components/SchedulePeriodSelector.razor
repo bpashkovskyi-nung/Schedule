@@ -1,0 +1,64 @@
+@using System.Globalization
+
+<div class="period-fields">
+    <label>
+        Період
+        <select value="@Value.PeriodKey" @onchange="HandlePeriodChanged">
+            @foreach (PeriodChoice option in Options)
+            {
+                <option value="@option.Key">@option.Label</option>
+            }
+        </select>
+    </label>
+    <label>
+        Від дати
+        <input type="date" value="@PeriodSelection.FormatDate(Value.FromDate)" @onchange="HandleFromChanged" disabled="@(!Value.IsCustom)" />
+    </label>
+    <label>
+        До дати
+        <input type="date" value="@PeriodSelection.FormatDate(Value.ToDate)" @onchange="HandleToChanged" disabled="@(!Value.IsCustom)" />
+    </label>
+    @if (ShowWeekly)
+    {
+        <label class="checkbox-field">
+            <input type="checkbox" checked="@Value.WeeklyView" @onchange="HandleWeeklyChanged" />
+            <span>Тижневий вигляд</span>
+        </label>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PeriodSelection Value { get; set; } = default!;
+
+    [Parameter]
+    public bool ShowWeekly { get; set; }
+
+    private IReadOnlyList<PeriodChoice> Options => PeriodSelection.GetOptions();
+
+    private void HandlePeriodChanged(ChangeEventArgs args)
+    {
+        Value.ApplyPeriod(args.Value?.ToString());
+    }
+
+    private void HandleFromChanged(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParseExact(args.Value?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly value))
+        {
+            Value.FromDate = value;
+        }
+    }
+
+    private void HandleToChanged(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParseExact(args.Value?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly value))
+        {
+            Value.ToDate = value;
+        }
+    }
+
+    private void HandleWeeklyChanged(ChangeEventArgs args)
+    {
+        Value.WeeklyView = args.Value is bool value && value;
+    }
+}

@@ -1,6 +1,6 @@
 @using System.Globalization
 
-@if (Result.Lessons.Count == 0)
+@if (VisibleLessons.Count == 0)
 {
     <section class="empty-state">
         <h2>Розклад не знайдено</h2>
@@ -13,9 +13,15 @@ else
         <div class="result-heading">
             <div>
                 <p class="eyebrow">Результат</p>
-                <h2>@Result.ObjectName</h2>
+                <h2>@(TitleOverride ?? Result.ObjectName)</h2>
             </div>
-            <span class="period-label">@Result.Period.From.ToString("dd.MM.yyyy") — @Result.Period.To.ToString("dd.MM.yyyy")</span>
+            <div class="result-heading__actions">
+                <span class="period-label">@Result.Period.From.ToString("dd.MM.yyyy") — @Result.Period.To.ToString("dd.MM.yyyy")</span>
+                @if (!string.IsNullOrWhiteSpace(ExportUrl))
+                {
+                    <a class="secondary-button" href="@ExportUrl" target="_blank" rel="noopener noreferrer">Експорт iCal</a>
+                }
+            </div>
         </div>
 
         @if (WeeklyView)
@@ -23,14 +29,14 @@ else
             <div class="weeks-list">
                 @foreach (DateOnly weekStart in GetWeekStarts())
                 {
-                    <ScheduleWeek WeekStart="weekStart" Lessons="@Result.Lessons" />
+                    <ScheduleWeek WeekStart="weekStart" Lessons="@VisibleLessons" />
                 }
             </div>
         }
         else
         {
             <div class="days-grid">
-                @foreach (IGrouping<DateOnly, LessonDto> day in Result.Lessons
+                @foreach (IGrouping<DateOnly, LessonDto> day in VisibleLessons
                     .Where(x => x.Date.HasValue)
                     .GroupBy(x => x.Date!.Value)
                     .OrderBy(x => x.Key))
@@ -48,6 +54,16 @@ else
 
     [Parameter]
     public bool WeeklyView { get; set; }
+
+    [Parameter]
+    public string? ExportUrl { get; set; }
+
+    [Parameter]
+    public string? TitleOverride { get; set; }
+
+    private IReadOnlyList<LessonDto> VisibleLessons => Result.Lessons
+        .Where(lesson => lesson.Date.HasValue && !string.IsNullOrWhiteSpace(lesson.LessonDescription))
+        .ToList();
 
     private IEnumerable<DateOnly> GetWeekStarts()
     {
