@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dekanat.ScheduleSdk" Version="1.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
+    <ProjectReference Include="..\src\Schedule.Client.Core\Schedule.Client.Core.csproj" />
+    <ProjectReference Include="..\src\Schedule.Contracts\Schedule.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

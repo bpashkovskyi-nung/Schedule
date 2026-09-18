@@ -35,11 +35,9 @@
             .ToList();
 
         string label = GetLinkLabel(comment);
-        return urls
-            .Select((url, index) => new ParsedLink(
-                url,
-                urls.Count == 1 ? label : $"{label} {index + 1}"))
-            .ToList();
+        return urls.Select((url, index) => new ParsedLink(
+            url,
+            urls.Count == 1 ? label : $"{label} {index + 1}")).ToList();
     }
 
     private static string GetLinkLabel(string? comment)

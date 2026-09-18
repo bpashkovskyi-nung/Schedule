@@ -48,7 +48,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Schedule.Client.Core\Schedule.Client.Core.csproj" />
-        <ProjectReference Include="..\Schedule.Client.UI\Schedule.Client.UI.csproj" />
 
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#111D2D" />

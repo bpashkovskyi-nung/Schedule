@@ -1,32 +1,29 @@
 # Schedule (NUNG)
 
-Платформа для перегляду розкладу занять НУНГ із окремим API та спільним клієнтським UI для Web і Android.
+Платформа для перегляду розкладу занять НУНГ із legacy MVC-сайтом, Android-додатком і єдиним API.
 
-Поточна міграція додає цільову структуру:
+Цільова архітектура:
 
 - `src/Schedule.Api` — ASP.NET Core API, яке є єдиним шаром інтеграції з `Dekanat.ScheduleSdk`;
 - `src/Schedule.Contracts` — DTO та enum-и HTTP API;
 - `src/Schedule.Client.Core` — спільний typed API client і client state;
-- `src/Schedule.Client.UI` — спільна Razor Class Library;
-- `src/Schedule.Web` — Blazor Web App з Interactive WebAssembly;
-- `src/Schedule.Mobile` — .NET MAUI Blazor Hybrid для Android.
+- `Schedule.Web` — тонкий legacy MVC-клієнт, який звертається тільки до API;
+- `src/Schedule.Mobile` — .NET MAUI Blazor Hybrid для Android, який звертається тільки до API.
 
-Старий `Schedule.Web` у корені рішення тимчасово зберігається як legacy MVC-клієнт на час міграції та згрупований у solution-папці `legacy`.
+API може використовувати `Dekanat` або `Database` як джерело розкладу. MVC і Android не знають, яке джерело активне.
 
 ## Рішення
 
 - `Schedule.sln` — класичний Visual Studio solution
 - `Schedule.slnx` — XML solution (створюється `dotnet new sln` за замовчуванням у .NET SDK 10)
 
-Legacy та нові проєкти:
+Проєкти:
 
 - `Schedule.Web/Schedule.Web.csproj`
 - `Schedule.UnitTests/Schedule.UnitTests.csproj`
 - `src/Schedule.Api/Schedule.Api.csproj`
 - `src/Schedule.Contracts/Schedule.Contracts.csproj`
 - `src/Schedule.Client.Core/Schedule.Client.Core.csproj`
-- `src/Schedule.Client.UI/Schedule.Client.UI.csproj`
-- `src/Schedule.Web/Schedule.Web/Schedule.Web.csproj`
 - `src/Schedule.Mobile/Schedule.Mobile.csproj`
 - `tests/Schedule.Api.UnitTests/Schedule.Api.UnitTests.csproj`
 - `tests/Schedule.Client.Core.UnitTests/Schedule.Client.Core.UnitTests.csproj`
@@ -47,33 +44,20 @@ API кешує довідники на 10 хвилин і повертає по�
 `{ "code": "...", "message": "...", "traceId": "..." }`.
 Зовнішні запити мають timeout/retry policy, workload endpoint-и обмежені rate limit-ом, а OpenAPI доступний у Development або коли `ScheduleApi:EnableOpenApi=true`.
 
-## Запуск нового Web-клієнта
+## Запуск legacy MVC
 
 В іншому терміналі:
 
 ```bash
-dotnet run --project src/Schedule.Web/Schedule.Web
+dotnet run --project Schedule.Web/Schedule.Web.csproj
 ```
 
-Web-клієнт використовує `ApiBaseUrl` із `src/Schedule.Web/Schedule.Web/appsettings.Development.json`.
-Спільна сторінка розкладу підтримує список занять і тижневий вигляд.
-Для production за замовчуванням використовується `https://api.schedule.ksm.if.ua/`; локальний профіль Development перевизначає його на `http://localhost:5274/`.
+MVC використовує `ApiBaseUrl` із `Schedule.Web/appsettings.json`.
+Усі форми залишаються GET-запитами, тому параметри видно в URL, а F5 повторює пошук.
 
-## Тимчасовий legacy iCal
+## iCal
 
-Legacy MVC за замовчуванням бере розклад JSON через SDK і генерує `.ics` локально.
-Кнопка експорту передає в URL вибраний період дат.
-Перемикач знаходиться в `Schedule.Web/appsettings.json`:
-
-```json
-"Features": {
-  "GenerateIcalFromJson": true
-}
-```
-
-Значення `false` повертає старий прямий iCal-запит до Dekanat.
-
-Legacy-пошук працює через `GET`: параметри форми видно в URL, тому F5 повторює той самий запит без повторного надсилання POST. Активна вкладка також записується в query-параметр `tab`.
+Legacy MVC передає iCal-запит до API. Генерація iCal і вибір джерела даних виконуються централізовано в API.
 
 ## Запуск Android
 

@@ -206,8 +206,6 @@ public sealed class ScheduleApiService(
     private static LessonDto MapLesson(ScheduleItem item)
     {
         string description = item.LessonDescription ?? string.Empty;
-        bool substitution = description.Contains("Увага! Заміна", StringComparison.OrdinalIgnoreCase);
-        bool halfLesson = description.Contains("півпара", StringComparison.OrdinalIgnoreCase);
 
         return new LessonDto
         {
@@ -230,11 +228,6 @@ public sealed class ScheduleApiService(
             Online = item.Online ?? string.Empty,
             LinkComment = item.LinkComment ?? string.Empty,
             Link = item.Link ?? string.Empty,
-            LessonType = GetLessonType(description),
-            HourType = GetHourType(description),
-            IsHalfLesson = halfLesson,
-            IsSubstitution = substitution,
-            LessonHours = substitution ? 0 : halfLesson ? 1 : 2,
         };
     }
 
@@ -248,24 +241,4 @@ public sealed class ScheduleApiService(
         return entity.Name ?? string.Empty;
     }
 
-    private static LessonType GetLessonType(string description)
-    {
-        if (description.Contains("(Лаб)", StringComparison.OrdinalIgnoreCase)) return LessonType.Laboratory;
-        if (description.Contains("(Пр)", StringComparison.OrdinalIgnoreCase)) return LessonType.Practical;
-        if (description.Contains("(Сем)", StringComparison.OrdinalIgnoreCase)) return LessonType.Seminar;
-        if (description.Contains("(Зал)", StringComparison.OrdinalIgnoreCase)) return LessonType.Credit;
-        if (description.Contains("(КЕкз)", StringComparison.OrdinalIgnoreCase)) return LessonType.ExamConsultation;
-        if (description.Contains("(Екз)", StringComparison.OrdinalIgnoreCase)) return LessonType.Exam;
-        if (description.Contains("(Л)", StringComparison.OrdinalIgnoreCase)) return LessonType.Lecture;
-
-        return LessonType.Other;
-    }
-
-    private static HourType GetHourType(string description)
-    {
-        if (description.Contains("мз-", StringComparison.OrdinalIgnoreCase)) return HourType.Hourly;
-        if (description.Contains("з-", StringComparison.OrdinalIgnoreCase)) return HourType.PartTime;
-
-        return HourType.FullTime;
-    }
 }

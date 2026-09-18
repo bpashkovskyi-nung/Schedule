@@ -1,8 +1,6 @@
 # Legacy MVC-клієнт розкладу
 
-Цей проєкт тимчасово залишений для безпечної міграції. Новий клієнт розташований у `src/Schedule.Web` і працює через `src/Schedule.Api`.
-
-Додаток для перегляду розкладу занять НУНГ на **ASP.NET Core MVC** з інтеграцією [Dekanat.ScheduleSdk](https://www.nuget.org/packages/Dekanat.ScheduleSdk).
+Тонкий ASP.NET Core MVC-клієнт. Він не підключається напряму до деканату або SQL Server, а отримує всі дані через `Schedule.Api`.
 
 ## Функції
 
@@ -12,11 +10,14 @@
 - Список і тижневий вигляд
 - Експорт iCal
 
-## Технології
+## Архітектура
 
 - ASP.NET Core MVC (.NET 10)
-- [Dekanat.ScheduleSdk](https://www.nuget.org/packages/Dekanat.ScheduleSdk) — API ПС-Розклад
+- `Schedule.Client.Core` — HTTP-клієнт `Schedule.Api`
+- `Schedule.Contracts` — DTO HTTP API
 - Bootstrap 5
+
+Єдине місце інтеграції з Dekanat SDK та БД — `src/Schedule.Api`. Джерело даних перемикається конфігурацією API, а legacy залишається незмінним.
 
 ## Запуск
 
@@ -32,7 +33,7 @@ dotnet run
 ```
 Schedule.Web/
 ├── Controllers/HomeController.cs
-├── Services/              # робота з SDK та підказками timetable.cgi
+├── Services/              # тонкі адаптери API та підготовка даних для view
 ├── ViewModels/
 ├── Views/Home/Index.cshtml
 └── wwwroot/css, js

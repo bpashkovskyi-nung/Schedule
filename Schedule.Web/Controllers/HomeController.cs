@@ -1,9 +1,9 @@
-using Dekanat.ScheduleSdk.Enums;
-using Dekanat.ScheduleSdk.Exceptions;
-using Dekanat.ScheduleSdk.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Schedule.Web.Configuration;
+using Schedule.Client.Core.Api;
+using Schedule.Contracts.AuditoriumLoad;
+using Schedule.Contracts.Schedules;
+using Schedule.Contracts.Suggestions;
+using Schedule.Contracts.Workload;
 using Schedule.Web.Services;
 using Schedule.Web.ViewModels;
 
@@ -12,11 +12,7 @@ namespace Schedule.Web.Controllers;
 public sealed class HomeController(
     IScheduleReferenceService referenceService,
     IScheduleQueryService scheduleQuery,
-    ITimetableSuggestionsService suggestionsService,
-    IAuditoriumLoadService auditoriumLoadService,
-    PeriodOptionsProvider periodOptions,
-    IOptions<LegacyFeatureOptions> featureOptions,
-    ILegacyIcalGenerator icalGenerator) : Controller
+    PeriodOptionsProvider periodOptions) : Controller
 {
     [HttpGet]
     public IActionResult Error() => View();
@@ -77,50 +73,27 @@ public sealed class HomeController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> Ical(
+    public IActionResult Ical(
         string? mode,
         string? objectId,
         DateOnly? from,
-        DateOnly? to,
-        CancellationToken cancellationToken)
+        DateOnly? to)
     {
-        if (!featureOptions.Value.GenerateIcalFromJson)
-        {
-            return NotFound();
-        }
-
-        if (!TryParseScheduleMode(mode, out RequestMode parsedMode) ||
+        if (!TryParseScheduleMode(mode, out ScheduleTargetType targetType) ||
             string.IsNullOrWhiteSpace(objectId) ||
             (from is null) != (to is null))
         {
             return BadRequest("Некоректні параметри iCal-запиту.");
         }
 
-        string normalizedObjectId = objectId.Trim();
-        (DateOnly fromDate, DateOnly toDate) = ResolveIcalDates(from, to);
-
-        if (fromDate > toDate)
+        DateOnly beginDate = from ?? DateOnly.FromDateTime(DateTime.Today);
+        DateOnly endDate = to ?? beginDate.AddDays(6);
+        if (beginDate > endDate)
         {
             return BadRequest("Некоректний діапазон дат iCal-запиту.");
         }
 
-        try
-        {
-            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                parsedMode,
-                normalizedObjectId,
-                fromDate,
-                toDate,
-                cancellationToken);
-
-            byte[] calendar = icalGenerator.Generate(export, normalizedObjectId);
-            string fileName = $"{SanitizeFileName(normalizedObjectId)}.ics";
-            return File(calendar, "text/calendar; charset=utf-8", fileName);
-        }
-        catch (PsRozkladApiException exception)
-        {
-            return StatusCode(StatusCodes.Status502BadGateway, exception.ErrorMessage);
-        }
+        return Redirect(scheduleQuery.BuildExportUrl(targetType, objectId.Trim(), beginDate, endDate));
     }
 
     private async Task<IActionResult> SearchUnifiedAsync(
@@ -157,23 +130,25 @@ public sealed class HomeController(
                 form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
 
             bool isTeacher = !string.IsNullOrEmpty(form.TeacherId);
-            RequestMode mode = isTeacher ? RequestMode.Teacher : RequestMode.Group;
+            ScheduleTargetType targetType = isTeacher ? ScheduleTargetType.Teacher : ScheduleTargetType.Group;
             string objectId = isTeacher ? form.TeacherId! : form.GroupId!;
-            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(mode, objectId, from, to, cancellationToken);
+            ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
+                targetType, objectId, from, to, cancellationToken);
 
             string title = isTeacher
                 ? ScheduleLookup.FindTeacherName(model.Reference, objectId) ?? "Викладач"
                 : ScheduleLookup.FindGroupName(model.Reference, objectId) ?? "Група";
 
-            model.Unified.Result = BuildScheduleResult(export, title, form.WeeklyView, mode, objectId, from, to, scheduleQuery);
+            model.Unified.Result = BuildScheduleResult(
+                response, title, form.WeeklyView, targetType, objectId, from, to);
         }
-        catch (PsRozkladApiException ex)
+        catch (ScheduleApiException exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
+            model.ErrorMessage = exception.Message;
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -198,21 +173,16 @@ public sealed class HomeController(
 
             (DateOnly from, DateOnly to) = PeriodOptionsProvider.ResolveDates(
                 form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
-
-            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                RequestMode.Room, form.RoomId, from, to, cancellationToken);
-
+            ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
+                ScheduleTargetType.Room, form.RoomId, from, to, cancellationToken);
             string title = ScheduleLookup.FindRoomName(model.Reference, form.RoomId) ?? "Аудиторія";
+
             model.Rooms.Result = BuildScheduleResult(
-                export, title, form.WeeklyView, RequestMode.Room, form.RoomId, from, to, scheduleQuery);
+                response, title, form.WeeklyView, ScheduleTargetType.Room, form.RoomId, from, to);
         }
-        catch (PsRozkladApiException ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
-        }
-        catch (Exception ex)
-        {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -237,21 +207,16 @@ public sealed class HomeController(
 
             (DateOnly from, DateOnly to) = PeriodOptionsProvider.ResolveDates(
                 form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
-
-            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                RequestMode.Teacher, form.TeacherId, from, to, cancellationToken);
-
+            ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
+                ScheduleTargetType.Teacher, form.TeacherId, from, to, cancellationToken);
             string title = ScheduleLookup.FindTeacherName(model.Reference, form.TeacherId) ?? "Викладач";
+
             model.Teachers.Result = BuildScheduleResult(
-                export, title, form.WeeklyView, RequestMode.Teacher, form.TeacherId, from, to, scheduleQuery);
+                response, title, form.WeeklyView, ScheduleTargetType.Teacher, form.TeacherId, from, to);
         }
-        catch (PsRozkladApiException ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
-        }
-        catch (Exception ex)
-        {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -276,21 +241,16 @@ public sealed class HomeController(
 
             (DateOnly from, DateOnly to) = PeriodOptionsProvider.ResolveDates(
                 form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
-
-            PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                RequestMode.Group, form.GroupId, from, to, cancellationToken);
-
+            ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
+                ScheduleTargetType.Group, form.GroupId, from, to, cancellationToken);
             string title = ScheduleLookup.FindGroupName(model.Reference, form.GroupId) ?? "Група";
+
             model.Groups.Result = BuildScheduleResult(
-                export, title, form.WeeklyView, RequestMode.Group, form.GroupId, from, to, scheduleQuery);
+                response, title, form.WeeklyView, ScheduleTargetType.Group, form.GroupId, from, to);
         }
-        catch (PsRozkladApiException ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
-        }
-        catch (Exception ex)
-        {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -315,42 +275,23 @@ public sealed class HomeController(
 
             (DateOnly from, DateOnly to) = PeriodOptionsProvider.ResolveDates(
                 form.PeriodKey, form.FromDate, form.ToDate, model.PeriodOptions);
+            TeachingLoadResponse result = await scheduleQuery.GetTeachingLoadAsync(
+                form.DepartmentName, from, to, cancellationToken);
 
-            IReadOnlyList<ScheduleEntityVm> teachers =
-                ScheduleLookup.GetTeachersForDepartment(model.Reference, form.DepartmentName);
-
-            if (teachers.Count == 0)
+            model.TeachingLoad.Result = new TeachingLoadResultVm
             {
-                model.ErrorMessage = "Підрозділ не знайдено";
-                return View("Index", model);
-            }
-
-            List<PsRozkladExport> schedules = new(teachers.Count);
-            foreach (ScheduleEntityVm teacher in teachers)
-            {
-                try
+                SessionTypes = result.SessionTypes,
+                Rows = result.Rows.Select(row => new TeachingLoadRowVm
                 {
-                    PsRozkladExport export = await scheduleQuery.GetScheduleAsync(
-                        RequestMode.Teacher, teacher.Id, from, to, cancellationToken);
-                    schedules.Add(export);
-                }
-                catch (PsRozkladApiException exception) when (
-                    exception.ErrorCode == (int)ApiResultCode.NotFound)
-                {
-                    // A teacher without lessons in the selected period still belongs in the report.
-                    schedules.Add(new PsRozkladExport { Code = 0, ScheduleItems = [] });
-                }
-            }
-
-            model.TeachingLoad.Result = ScheduleDisplayService.BuildTeachingLoad(teachers, schedules);
+                    TeacherName = row.TeacherName,
+                    HoursByType = row.HoursByType,
+                    TotalHours = row.TotalHours,
+                }).ToList(),
+            };
         }
-        catch (PsRozkladApiException ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
-        }
-        catch (Exception ex)
-        {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -376,27 +317,27 @@ public sealed class HomeController(
                 return View("Index", model);
             }
 
-            int workingDays = ScheduleDisplayService.CountWorkingDays(from, to);
-            if (workingDays <= 0)
+            AuditoriumLoadResponse result = await scheduleQuery.GetAuditoriumLoadAsync(
+                form.BlockName, from, to, form.PairsFrom, form.PairsTo, cancellationToken);
+
+            model.AuditoriumLoad.Result = new AuditoriumLoadResultVm
             {
-                model.ErrorMessage = "На обраний період немає робочих днів (пн-пт)";
-                return View("Index", model);
-            }
+                Items = result.Items.Select(item => new AuditoriumLoadItemVm
+                {
+                    RoomName = item.RoomName,
+                    BlockName = item.BuildingName,
+                    Percent = item.Percent,
+                    ActualPairs = item.ActualPairs,
+                    PossiblePairs = item.PossiblePairs,
+                }).ToList(),
+                ErrorCount = result.ErrorCount,
+                WorkingDays = result.WorkingDays,
+                PossiblePairsPerRoom = result.PossiblePairsPerRoom,
+            };
 
             string scope = string.IsNullOrWhiteSpace(form.BlockName)
                 ? "Усі корпуси."
                 : $"Корпус: {form.BlockName}.";
-
-            AuditoriumLoadResultVm result = await auditoriumLoadService.CalculateAsync(
-                model.Reference,
-                form.BlockName,
-                from,
-                to,
-                form.PairsFrom,
-                form.PairsTo,
-                cancellationToken);
-
-            model.AuditoriumLoad.Result = result;
             model.AuditoriumLoad.Summary =
                 $"{scope} Робочих днів: {result.WorkingDays}. Пари: {form.PairsFrom}-{form.PairsTo}. " +
                 $"Можливо пар у кожній аудиторії: {result.PossiblePairsPerRoom}.";
@@ -407,13 +348,9 @@ public sealed class HomeController(
                     $"Не вдалося завантажити розклад для {result.ErrorCount} аудиторій. Вони показані як 0%.";
             }
         }
-        catch (PsRozkladApiException ex)
+        catch (Exception exception)
         {
-            model.ErrorMessage = ex.ErrorMessage;
-        }
-        catch (Exception ex)
-        {
-            model.ErrorMessage = ex.Message;
+            model.ErrorMessage = exception.Message;
         }
 
         ApplyDefaultDates(model);
@@ -430,7 +367,9 @@ public sealed class HomeController(
         };
     }
 
-    private async Task PopulateUnifiedListsAsync(ScheduleIndexViewModel model, CancellationToken cancellationToken)
+    private async Task PopulateUnifiedListsAsync(
+        ScheduleIndexViewModel model,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(model.Unified.FacultyName))
         {
@@ -445,69 +384,61 @@ public sealed class HomeController(
             return;
         }
 
-        Dictionary<string, ScheduleEntityVm> teacherByFullName = model.Reference.TeacherDepartments
-            .SelectMany(d => d.Entities)
-            .Where(t => !string.IsNullOrWhiteSpace(t.FullName))
-            .GroupBy(t => t.FullName, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
-
-        IReadOnlyList<string> teacherSuggestions = await suggestionsService.GetSuggestionsAsync(
-            141, facultyId, 0, cancellationToken: cancellationToken);
-
-        model.Unified.AvailableTeachers = teacherSuggestions
-            .Where(name => teacherByFullName.ContainsKey(name))
-            .Select(name => teacherByFullName[name])
+        SuggestionsResponse teacherSuggestions = await scheduleQuery.GetTeacherSuggestionsAsync(
+            facultyId, cancellationToken);
+        HashSet<string> teacherNames = teacherSuggestions.Suggestions.ToHashSet(StringComparer.Ordinal);
+        model.Unified.AvailableTeachers = model.Reference.TeacherDepartments
+            .SelectMany(department => department.Entities)
+            .Where(teacher => teacherNames.Contains(teacher.FullName))
+            .OrderBy(teacher => teacher.FullName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         DepartmentVm? faculty = model.Reference.GroupDepartments
-            .FirstOrDefault(d => FacultyConstants.NormalizeFacultyName(d.Name) ==
-                                 FacultyConstants.NormalizeFacultyName(model.Unified.FacultyName!));
-
+            .FirstOrDefault(department => FacultyConstants.NormalizeFacultyName(department.Name) ==
+                                          FacultyConstants.NormalizeFacultyName(model.Unified.FacultyName));
         if (faculty is null)
         {
             model.Unified.AvailableGroups = [];
             return;
         }
 
-        IReadOnlyList<string> groupSuggestions = await suggestionsService.GetSuggestionsAsync(
-            142, facultyId, model.Unified.Course, cancellationToken: cancellationToken);
-
-        HashSet<string> allowed = groupSuggestions.ToHashSet(StringComparer.Ordinal);
+        SuggestionsResponse groupSuggestions = await scheduleQuery.GetGroupSuggestionsAsync(
+            facultyId, model.Unified.Course, cancellationToken);
+        HashSet<string> groupNames = groupSuggestions.Suggestions.ToHashSet(StringComparer.Ordinal);
         model.Unified.AvailableGroups = faculty.Entities
-            .Where(g => model.Unified.Course <= 0 || allowed.Count == 0 || allowed.Contains(g.Name))
+            .Where(group => model.Unified.Course <= 0 || groupNames.Count == 0 || groupNames.Contains(group.Name))
+            .OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
 
-    private static ScheduleResultVm BuildScheduleResult(
-        PsRozkladExport export,
+    private ScheduleResultVm BuildScheduleResult(
+        ScheduleResponse response,
         string title,
         bool weeklyView,
-        RequestMode mode,
+        ScheduleTargetType targetType,
         string objectId,
         DateOnly from,
-        DateOnly to,
-        IScheduleQueryService queryService)
+        DateOnly to)
     {
-        IReadOnlyList<ScheduleItem>? items = export.ScheduleItems ?? [];
         IReadOnlyDictionary<string, IReadOnlyList<ScheduleItemVm>> grouped =
-            ScheduleDisplayService.GroupByDate(items);
+            ScheduleDisplayService.GroupByDate(response.Lessons);
 
         return new ScheduleResultVm
         {
             Title = title,
             IsWeeklyView = weeklyView,
-            ExportUrl = weeklyView ? null : queryService.BuildExportUrl(mode, objectId, from, to),
+            ExportUrl = weeklyView ? null : scheduleQuery.BuildExportUrl(targetType, objectId, from, to),
             GroupedByDate = weeklyView ? null : grouped,
             Weeks = weeklyView ? ScheduleDisplayService.CreateWeeklyView(grouped) : null,
         };
     }
 
-    private static void ApplyDefaultDates(ScheduleIndexViewModel model)
+    private void ApplyDefaultDates(ScheduleIndexViewModel model)
     {
         void Apply(DateRangeFormVm form)
         {
-            PeriodOptionVm? option = model.PeriodOptions.FirstOrDefault(o => o.Key == form.PeriodKey)
-                                   ?? model.PeriodOptions.First(o => o.Key == "to_end_of_week");
+            PeriodOptionVm option = model.PeriodOptions.FirstOrDefault(item => item.Key == form.PeriodKey)
+                                    ?? model.PeriodOptions.First(item => item.Key == "to_end_of_week");
 
             if (form.PeriodKey != "custom" || form.FromDate is null)
             {
@@ -528,47 +459,18 @@ public sealed class HomeController(
         Apply(model.AuditoriumLoad);
     }
 
-    private (DateOnly From, DateOnly To) ResolveIcalDates(DateOnly? from, DateOnly? to)
+    private static bool TryParseScheduleMode(string? value, out ScheduleTargetType targetType)
     {
-        if (from is not null && to is not null)
+        targetType = value?.Trim().ToLowerInvariant() switch
         {
-            return (from.Value, to.Value);
-        }
-
-        PeriodOptionVm currentTerm = periodOptions.GetPeriodOptions()
-            .First(option => option.Key == "current_term");
-        return (currentTerm.FromDate, currentTerm.ToDate);
-    }
-
-    private static bool TryParseScheduleMode(string? value, out RequestMode mode)
-    {
-        mode = value?.Trim().ToLowerInvariant() switch
-        {
-            "teacher" or "teachers" => RequestMode.Teacher,
-            "group" or "groups" => RequestMode.Group,
-            "room" or "rooms" or "auditorium" or "auditoriums" => RequestMode.Room,
+            "teacher" or "teachers" => ScheduleTargetType.Teacher,
+            "group" or "groups" => ScheduleTargetType.Group,
+            "room" or "rooms" or "auditorium" or "auditoriums" => ScheduleTargetType.Room,
             _ => default,
         };
 
-        return value?.Trim().ToLowerInvariant() switch
-        {
+        return value?.Trim().ToLowerInvariant() is
             "teacher" or "teachers" or "group" or "groups" or
-            "room" or "rooms" or "auditorium" or "auditoriums" => true,
-            _ => false,
-        };
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        string fileName = string.Concat(value.Where(character =>
-            char.IsLetterOrDigit(character) || character is '-' or '_' or ' '));
-        fileName = fileName.Trim().Replace(' ', '_');
-
-        if (fileName.Length > 80)
-        {
-            fileName = fileName[..80];
-        }
-
-        return string.IsNullOrWhiteSpace(fileName) ? "schedule" : fileName;
+            "room" or "rooms" or "auditorium" or "auditoriums";
     }
 }

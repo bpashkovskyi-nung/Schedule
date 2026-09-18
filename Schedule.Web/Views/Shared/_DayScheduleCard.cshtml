@@ -1,6 +1,13 @@
 @model KeyValuePair<string, IReadOnlyList<ScheduleItemVm>>
 @{
-    DateOnly? date = ScheduleDateExtensions.ParseApiDate(Model.Key);
+    DateOnly? date = DateOnly.TryParseExact(
+        Model.Key,
+        ["dd.MM.yyyy", "yyyy-MM-dd"],
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.None,
+        out DateOnly parsedDate)
+        ? parsedDate
+        : null;
     string dayName = date?.DayOfWeek switch
     {
         DayOfWeek.Monday => "Понеділок",

@@ -2,13 +2,8 @@
   <Folder Name="/src/">
     <Project Path="src/Schedule.Api/Schedule.Api.csproj" />
     <Project Path="src/Schedule.Client.Core/Schedule.Client.Core.csproj" />
-    <Project Path="src/Schedule.Client.UI/Schedule.Client.UI.csproj" />
     <Project Path="src/Schedule.Contracts/Schedule.Contracts.csproj" />
     <Project Path="src/Schedule.Mobile/Schedule.Mobile.csproj" />
-  </Folder>
-  <Folder Name="/src/Schedule.Web/">
-    <Project Path="src/Schedule.Web/Schedule.Web.Client/Schedule.Web.Client.csproj" />
-    <Project Path="src/Schedule.Web/Schedule.Web/Schedule.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Schedule.Api.UnitTests/Schedule.Api.UnitTests.csproj" />

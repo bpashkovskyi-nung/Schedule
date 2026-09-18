@@ -21,9 +21,4 @@ public sealed record LessonDto
     public string Online { get; init; } = string.Empty;
     public string LinkComment { get; init; } = string.Empty;
     public string Link { get; init; } = string.Empty;
-    public LessonType LessonType { get; init; }
-    public HourType HourType { get; init; }
-    public bool IsHalfLesson { get; init; }
-    public bool IsSubstitution { get; init; }
-    public int LessonHours { get; init; }
 }

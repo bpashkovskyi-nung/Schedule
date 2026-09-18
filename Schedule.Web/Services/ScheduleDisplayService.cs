@@ -1,14 +1,14 @@
-using Dekanat.ScheduleSdk;
-using Dekanat.ScheduleSdk.Models;
-using Schedule.Web.ViewModels;
+using System.Globalization;
 using System.Text.RegularExpressions;
+using Schedule.Contracts.Schedules;
+using Schedule.Web.ViewModels;
 
 namespace Schedule.Web.Services;
 
 internal static class ScheduleDisplayService
 {
     internal static IReadOnlyDictionary<string, IReadOnlyList<ScheduleItemVm>> GroupByDate(
-        IReadOnlyList<ScheduleItem>? items)
+        IReadOnlyList<LessonDto>? items)
     {
         if (items is null || items.Count == 0)
         {
@@ -16,11 +16,12 @@ internal static class ScheduleDisplayService
         }
 
         return items
-            .GroupBy(i => i.Date ?? string.Empty)
-            .OrderBy(g => ParseApiDate(g.Key))
+            .Where(item => item.Date.HasValue && !string.IsNullOrWhiteSpace(item.LessonDescription))
+            .GroupBy(item => item.Date!.Value)
+            .OrderBy(group => group.Key)
             .ToDictionary(
-                g => g.Key,
-                g => (IReadOnlyList<ScheduleItemVm>)g.Select(MapItem).ToList());
+                group => group.Key.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
+                group => (IReadOnlyList<ScheduleItemVm>)group.Select(MapItem).ToList());
     }
 
     internal static IReadOnlyList<WeekScheduleVm> CreateWeeklyView(
@@ -46,10 +47,10 @@ internal static class ScheduleDisplayService
             DateOnly weekEnd = currentWeekStart.AddDays(4);
             List<DayScheduleVm> days = [];
 
-            for (int i = 0; i < 5; i++)
+            for (int offset = 0; offset < 5; offset++)
             {
-                DateOnly dayDate = currentWeekStart.AddDays(i);
-                string dayString = FormatApiDate(dayDate);
+                DateOnly dayDate = currentWeekStart.AddDays(offset);
+                string dayString = dayDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
                 IReadOnlyList<ScheduleItemVm> dayLessons = grouped.TryGetValue(dayString, out IReadOnlyList<ScheduleItemVm>? lessons)
                     ? lessons
                     : [];
@@ -58,17 +59,15 @@ internal static class ScheduleDisplayService
                 {
                     Date = dayString,
                     DayName = GetDayName(dayDate),
-                    Lessons = dayLessons
-                        .OrderBy(l => l.LessonTime, StringComparer.Ordinal)
-                        .ToList(),
+                    Lessons = dayLessons.OrderBy(lesson => lesson.LessonTime, StringComparer.Ordinal).ToList(),
                 });
             }
 
             weeks.Add(new WeekScheduleVm
             {
                 WeekNumber = weekNumber++,
-                StartDate = FormatApiDate(currentWeekStart),
-                EndDate = FormatApiDate(weekEnd),
+                StartDate = currentWeekStart.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
+                EndDate = weekEnd.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
                 Days = days,
             });
 
@@ -78,112 +77,11 @@ internal static class ScheduleDisplayService
         return weeks;
     }
 
-    internal static TeachingLoadResultVm BuildTeachingLoad(
-        IReadOnlyList<ScheduleEntityVm> teachers,
-        IReadOnlyList<PsRozkladExport> schedules)
+    private static ScheduleItemVm MapItem(LessonDto item) => new()
     {
-        Dictionary<string, bool> sessionTypes = new(StringComparer.Ordinal);
-        Dictionary<string, Dictionary<string, int>> teacherWorkload = new(StringComparer.Ordinal);
-
-        for (int i = 0; i < teachers.Count; i++)
-        {
-            string teacherId = teachers[i].Id;
-            teacherWorkload[teacherId] = new Dictionary<string, int>(StringComparer.Ordinal);
-            IReadOnlyList<ScheduleItem>? items = schedules[i].ScheduleItems;
-            if (items is null)
-            {
-                continue;
-            }
-
-            foreach (ScheduleItem item in items)
-            {
-                string? sessionType = ExtractSessionType(item.LessonDescription);
-                if (sessionType is null)
-                {
-                    continue;
-                }
-
-                sessionTypes.TryAdd(sessionType, true);
-                if (!teacherWorkload[teacherId].TryGetValue(sessionType, out int hours))
-                {
-                    teacherWorkload[teacherId][sessionType] = 0;
-                }
-
-                teacherWorkload[teacherId][sessionType] = hours + 2;
-            }
-        }
-
-        List<string> columns = sessionTypes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
-        List<TeachingLoadRowVm> rows = teachers
-            .Select(t =>
-            {
-                Dictionary<string, int> byType = teacherWorkload.GetValueOrDefault(t.Id) ?? new();
-                int total = columns.Sum(c => byType.GetValueOrDefault(c));
-                return new TeachingLoadRowVm
-                {
-                    TeacherName = t.FullName,
-                    HoursByType = columns.ToDictionary(c => c, c => byType.GetValueOrDefault(c)),
-                    TotalHours = total,
-                };
-            })
-            .ToList();
-
-        return new TeachingLoadResultVm { SessionTypes = columns, Rows = rows };
-    }
-
-    internal static int CountWorkingDays(DateOnly from, DateOnly to)
-    {
-        if (from > to)
-        {
-            return 0;
-        }
-
-        int count = 0;
-        for (DateOnly cursor = from; cursor <= to; cursor = cursor.AddDays(1))
-        {
-            if (cursor.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    internal static int CountActualPairs(
-        IReadOnlyList<ScheduleItem>? items,
-        int pairsFrom,
-        int pairsTo)
-    {
-        if (items is null || items.Count == 0)
-        {
-            return 0;
-        }
-
-        HashSet<string> usedSlots = new(StringComparer.Ordinal);
-        foreach (ScheduleItem item in items)
-        {
-            if (string.IsNullOrWhiteSpace(item.Date) ||
-                !int.TryParse(item.LessonNumber, out int lessonNumber) ||
-                string.IsNullOrWhiteSpace(item.LessonDescription))
-            {
-                continue;
-            }
-
-            if (lessonNumber >= pairsFrom && lessonNumber <= pairsTo)
-            {
-                usedSlots.Add($"{item.Date}|{lessonNumber}");
-            }
-        }
-
-        return usedSlots.Count;
-    }
-
-    private static ScheduleItemVm MapItem(ScheduleItem item) => new()
-    {
-        LessonNumber = item.LessonNumber ?? string.Empty,
-        LessonTime = item.LessonTime ?? string.Empty,
-        LessonDescription = item.LessonDescription ?? string.Empty,
+        LessonNumber = item.LessonNumber,
+        LessonTime = item.LessonTime,
+        LessonDescription = item.LessonDescription,
         Links = ParseLinks(item.Link, item.LinkComment),
     };
 
@@ -202,52 +100,36 @@ internal static class ScheduleDisplayService
             .ToList();
 
         string label = GetLinkLabel(comment);
-        return urls
-            .Select((url, index) => new ScheduleLinkVm
-            {
-                Url = url,
-                Label = urls.Count == 1 ? label : $"{label} {index + 1}",
-            })
-            .ToList();
+        return urls.Select((url, index) => new ScheduleLinkVm
+        {
+            Url = url,
+            Label = urls.Count == 1 ? label : $"{label} {index + 1}",
+        }).ToList();
     }
 
-    private static string GetLinkLabel(string? comment)
-    {
-        string label = Regex.Replace(comment ?? string.Empty, @"https?://[^\s<>;,""']+", string.Empty, RegexOptions.IgnoreCase)
-            .Trim(' ', '\t', '\r', '\n', ':', ';', ',');
-        return string.IsNullOrWhiteSpace(label) ? "Онлайн-заняття" : label;
-    }
+    private static string GetLinkLabel(string? comment) =>
+        string.IsNullOrWhiteSpace(comment)
+            ? "Онлайн-заняття"
+            : Regex.Replace(comment, @"https?://[^\s<>;,""']+", string.Empty, RegexOptions.IgnoreCase)
+                .Trim(' ', '\t', '\r', '\n', ':', ';', ',') is { Length: > 0 } label
+                ? label
+                : "Онлайн-заняття";
 
-    private static string TrimUrl(string value) =>
-        value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
+    private static string TrimUrl(string value) => value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
 
     private static bool IsHttpUrl(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private static string? ExtractSessionType(string? lessonDescription)
-    {
-        if (string.IsNullOrWhiteSpace(lessonDescription))
-        {
-            return null;
-        }
-
-        string[] patterns = ["(Лаб)", "(Л)", "(Пр)", "(Сем)", "(КЗ)", "(Зал)", "(Екз)", "(Курс)", "(Диплом)", "(Конс)"];
-        foreach (string pattern in patterns)
-        {
-            if (lessonDescription.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-            {
-                return pattern;
-            }
-        }
-
-        return null;
-    }
+    private static DateOnly ParseApiDate(string value) =>
+        DateOnly.TryParseExact(value, ["dd.MM.yyyy", "yyyy-MM-dd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date)
+            ? date
+            : DateOnly.MinValue;
 
     private static DateOnly GetWeekStart(DateOnly date)
     {
-        int offset = date.DayOfWeek == DayOfWeek.Sunday ? -6 : 1 - (int)date.DayOfWeek;
-        return date.AddDays(offset);
+        int offset = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-offset);
     }
 
     private static DateOnly GetWeekEnd(DateOnly weekStart) => weekStart.AddDays(6);
@@ -263,9 +145,4 @@ internal static class ScheduleDisplayService
         DayOfWeek.Sunday => "Неділя",
         _ => string.Empty,
     };
-
-    private static DateOnly ParseApiDate(string? apiDate) =>
-        ScheduleDateExtensions.ParseApiDate(apiDate) ?? DateOnly.MinValue;
-
-    private static string FormatApiDate(DateOnly date) => date.ToString("dd.MM.yyyy");
 }
