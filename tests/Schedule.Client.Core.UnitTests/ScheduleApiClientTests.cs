@@ -22,7 +22,6 @@ public sealed class ScheduleApiClientTests
                 {
                     TargetType = ScheduleTargetType.Group,
                     ObjectId = "group/1",
-                    ObjectName = "Група",
                     Period = new(new DateOnly(2026, 8, 24), new DateOnly(2026, 8, 30)),
                     Lessons = [],
                 }),

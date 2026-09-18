@@ -111,7 +111,6 @@ public sealed class ScheduleApiService(
         {
             TargetType = targetType,
             ObjectId = objectId,
-            ObjectName = objectId,
             Period = new DateRangeDto(from, to),
             Lessons = (export.ScheduleItems ?? []).Select(MapLesson).ToList(),
         };
@@ -196,9 +195,6 @@ public sealed class ScheduleApiService(
             {
                 Id = e.Id ?? string.Empty,
                 Name = e.Name ?? string.Empty,
-                LastName = e.LastName,
-                FirstName = e.FirstName,
-                Patronymic = e.Patronymic,
                 FullName = BuildTeacherFullName(e),
             })
             .ToList();
@@ -209,22 +205,17 @@ public sealed class ScheduleApiService(
 
         return new LessonDto
         {
-            ObjectName = item.ObjectName ?? string.Empty,
             Date = ScheduleDateExtensions.ParseApiDate(item.Date),
-            Comment = item.Comment ?? string.Empty,
             LessonNumber = item.LessonNumber ?? string.Empty,
             LessonName = item.LessonName ?? string.Empty,
             LessonTime = item.LessonTime ?? string.Empty,
             LessonDescription = description,
-            Half = item.Half ?? string.Empty,
             Teacher = item.Teacher ?? string.Empty,
-            AdditionalTeachers = item.AdditionalTeachers ?? string.Empty,
             Room = item.Room ?? string.Empty,
             Group = item.Group ?? string.Empty,
             Title = item.Title ?? string.Empty,
             Type = item.Type ?? string.Empty,
             Replacement = item.Replacement ?? string.Empty,
-            Reservation = item.Reservation ?? string.Empty,
             Online = item.Online ?? string.Empty,
             LinkComment = item.LinkComment ?? string.Empty,
             Link = item.Link ?? string.Empty,

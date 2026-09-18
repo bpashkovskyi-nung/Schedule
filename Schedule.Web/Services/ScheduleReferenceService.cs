@@ -46,9 +46,6 @@ public sealed class ScheduleReferenceService(IScheduleApiClient apiClient) : ISc
             {
                 Id = entity.Id,
                 Name = entity.Name,
-                LastName = entity.LastName,
-                FirstName = entity.FirstName,
-                Patronymic = entity.Patronymic,
                 FullName = entity.FullName,
             })
             .OrderBy(entity => entity.FullName, StringComparer.CurrentCultureIgnoreCase)

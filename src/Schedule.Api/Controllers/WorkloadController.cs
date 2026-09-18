@@ -149,9 +149,6 @@ public sealed class WorkloadController(
                 ErrorCount = errorCount,
                 WorkingDays = workingDays,
                 PossiblePairsPerRoom = possiblePairs,
-                Period = new DateRangeDto(from, to),
-                PairsFrom = pairsFrom,
-                PairsTo = pairsTo,
             });
         }
         catch (PsRozkladApiException exception)
