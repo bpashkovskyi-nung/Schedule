@@ -24,59 +24,6 @@ internal static class ScheduleDisplayService
                 group => (IReadOnlyList<ScheduleItemVm>)group.Select(MapItem).ToList());
     }
 
-    internal static IReadOnlyList<WeekScheduleVm> CreateWeeklyView(
-        IReadOnlyDictionary<string, IReadOnlyList<ScheduleItemVm>> grouped)
-    {
-        List<string> sortedDates = grouped.Keys.OrderBy(ParseApiDate).ToList();
-        if (sortedDates.Count == 0)
-        {
-            return [];
-        }
-
-        DateOnly firstDate = ParseApiDate(sortedDates[0]);
-        DateOnly lastDate = ParseApiDate(sortedDates[^1]);
-        DateOnly firstMonday = GetWeekStart(firstDate);
-        DateOnly lastFriday = GetWeekEnd(GetWeekStart(lastDate));
-
-        List<WeekScheduleVm> weeks = [];
-        DateOnly currentWeekStart = firstMonday;
-        int weekNumber = 1;
-
-        while (currentWeekStart <= lastFriday)
-        {
-            DateOnly weekEnd = currentWeekStart.AddDays(4);
-            List<DayScheduleVm> days = [];
-
-            for (int offset = 0; offset < 5; offset++)
-            {
-                DateOnly dayDate = currentWeekStart.AddDays(offset);
-                string dayString = dayDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-                IReadOnlyList<ScheduleItemVm> dayLessons = grouped.TryGetValue(dayString, out IReadOnlyList<ScheduleItemVm>? lessons)
-                    ? lessons
-                    : [];
-
-                days.Add(new DayScheduleVm
-                {
-                    Date = dayString,
-                    DayName = GetDayName(dayDate),
-                    Lessons = dayLessons.OrderBy(lesson => lesson.LessonTime, StringComparer.Ordinal).ToList(),
-                });
-            }
-
-            weeks.Add(new WeekScheduleVm
-            {
-                WeekNumber = weekNumber++,
-                StartDate = currentWeekStart.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
-                EndDate = weekEnd.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
-                Days = days,
-            });
-
-            currentWeekStart = currentWeekStart.AddDays(7);
-        }
-
-        return weeks;
-    }
-
     private static ScheduleItemVm MapItem(LessonDto item) => new()
     {
         LessonNumber = item.LessonNumber,
@@ -121,28 +68,4 @@ internal static class ScheduleDisplayService
         Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private static DateOnly ParseApiDate(string value) =>
-        DateOnly.TryParseExact(value, ["dd.MM.yyyy", "yyyy-MM-dd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date)
-            ? date
-            : DateOnly.MinValue;
-
-    private static DateOnly GetWeekStart(DateOnly date)
-    {
-        int offset = ((int)date.DayOfWeek + 6) % 7;
-        return date.AddDays(-offset);
-    }
-
-    private static DateOnly GetWeekEnd(DateOnly weekStart) => weekStart.AddDays(6);
-
-    private static string GetDayName(DateOnly date) => date.DayOfWeek switch
-    {
-        DayOfWeek.Monday => "Понеділок",
-        DayOfWeek.Tuesday => "Вівторок",
-        DayOfWeek.Wednesday => "Середа",
-        DayOfWeek.Thursday => "Четвер",
-        DayOfWeek.Friday => "П'ятниця",
-        DayOfWeek.Saturday => "Субота",
-        DayOfWeek.Sunday => "Неділя",
-        _ => string.Empty,
-    };
 }

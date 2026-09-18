@@ -27,52 +27,7 @@
         {
             <h5 class="mb-3">Розклад для: @Model.Title</h5>
 
-            @if (Model.IsWeeklyView && Model.Weeks is not null)
-            {
-                <div class="weekly-view-container">
-                    @foreach (WeekScheduleVm week in Model.Weeks)
-                    {
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="mb-0">Тиждень @week.WeekNumber (@week.StartDate — @week.EndDate)</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    @foreach (DayScheduleVm day in week.Days)
-                                    {
-                                        <div class="col-md-2 mb-3">
-                                            <div class="card h-100 day-card">
-                                                <div class="card-header text-center day-header">
-                                                    <strong>@day.DayName</strong><br />
-                                                    <small>@day.Date</small>
-                                                </div>
-                                                <div class="card-body p-2">
-                                                    @if (day.Lessons.Count == 0)
-                                                    {
-                                                        <div class="text-muted text-center small">Немає занять</div>
-                                                    }
-                                                    else
-                                                    {
-                                                        @foreach (ScheduleItemVm lesson in day.Lessons)
-                                                        {
-                                                            <div class="lesson-item">
-                                                                <div class="lesson-time">@lesson.LessonTime</div>
-                                                                <div class="lesson-description">@lesson.LessonDescription</div>
-                                                                @await Html.PartialAsync("_ScheduleLinks", lesson.Links)
-                                                            </div>
-                                                        }
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else if (Model.GroupedByDate is not null)
+            @if (Model.GroupedByDate is not null)
             {
                 <div class="row">
                     @foreach (KeyValuePair<string, IReadOnlyList<ScheduleItemVm>> day in Model.GroupedByDate)

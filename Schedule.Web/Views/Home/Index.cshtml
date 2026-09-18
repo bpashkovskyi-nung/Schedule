@@ -83,12 +83,6 @@
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Rooms)
-                            <div class="form-group mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="roomsWeekly" @(Model.Rooms.WeeklyView ? "checked" : null) />
-                                    <label class="form-check-label" for="roomsWeekly">Тижневий вигляд</label>
-                                </div>
-                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Знайти розклад</button>
                     </form>
@@ -202,12 +196,6 @@
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Teachers)
-                            <div class="form-group mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="teachersWeekly" @(Model.Teachers.WeeklyView ? "checked" : null) />
-                                    <label class="form-check-label" for="teachersWeekly">Тижневий вигляд</label>
-                                </div>
-                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Знайти розклад</button>
                     </form>
@@ -250,12 +238,6 @@
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Groups)
-                            <div class="form-group mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="WeeklyView" value="true" id="groupsWeekly" @(Model.Groups.WeeklyView ? "checked" : null) />
-                                    <label class="form-check-label" for="groupsWeekly">Тижневий вигляд</label>
-                                </div>
-                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Знайти розклад</button>
                     </form>

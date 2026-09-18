@@ -108,7 +108,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindRoomName(model.Reference, form.RoomId) ?? "Аудиторія";
 
             model.Rooms.Result = BuildScheduleResult(
-                response, title, form.WeeklyView, ScheduleTargetType.Room, form.RoomId, from, to);
+                response, title, ScheduleTargetType.Room, form.RoomId, from, to);
         }
         catch (Exception exception)
         {
@@ -142,7 +142,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindTeacherName(model.Reference, form.TeacherId) ?? "Викладач";
 
             model.Teachers.Result = BuildScheduleResult(
-                response, title, form.WeeklyView, ScheduleTargetType.Teacher, form.TeacherId, from, to);
+                response, title, ScheduleTargetType.Teacher, form.TeacherId, from, to);
         }
         catch (Exception exception)
         {
@@ -176,7 +176,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindGroupName(model.Reference, form.GroupId) ?? "Група";
 
             model.Groups.Result = BuildScheduleResult(
-                response, title, form.WeeklyView, ScheduleTargetType.Group, form.GroupId, from, to);
+                response, title, ScheduleTargetType.Group, form.GroupId, from, to);
         }
         catch (Exception exception)
         {
@@ -300,7 +300,6 @@ public sealed class HomeController(
     private ScheduleResultVm BuildScheduleResult(
         ScheduleResponse response,
         string title,
-        bool weeklyView,
         ScheduleTargetType targetType,
         string objectId,
         DateOnly from,
@@ -312,10 +311,8 @@ public sealed class HomeController(
         return new ScheduleResultVm
         {
             Title = title,
-            IsWeeklyView = weeklyView,
-            ExportUrl = weeklyView ? null : scheduleQuery.BuildExportUrl(targetType, objectId, from, to),
-            GroupedByDate = weeklyView ? null : grouped,
-            Weeks = weeklyView ? ScheduleDisplayService.CreateWeeklyView(grouped) : null,
+            ExportUrl = scheduleQuery.BuildExportUrl(targetType, objectId, from, to),
+            GroupedByDate = grouped,
         };
     }
 
