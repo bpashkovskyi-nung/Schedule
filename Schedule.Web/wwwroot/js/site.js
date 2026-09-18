@@ -9,19 +9,19 @@
     const activeTabKey = 'schedule.active-tab';
     const formStatePrefix = 'schedule.form.';
 
-    function getSessionValue(key) {
+    function getStorageValue(key) {
         try {
-            return window.sessionStorage.getItem(key);
+            return window.localStorage.getItem(key);
         } catch {
             return null;
         }
     }
 
-    function setSessionValue(key, value) {
+    function setStorageValue(key, value) {
         try {
-            window.sessionStorage.setItem(key, value);
+            window.localStorage.setItem(key, value);
         } catch {
-            // Session storage can be disabled by the browser or privacy settings.
+            // Local storage can be disabled by the browser or privacy settings.
         }
     }
 
@@ -147,14 +147,14 @@
     function saveFormState(form) {
         const tab = form.dataset.scheduleForm;
         if (!tab) return;
-        setSessionValue(formStatePrefix + tab, JSON.stringify(readFormState(form)));
+        setStorageValue(formStatePrefix + tab, JSON.stringify(readFormState(form)));
     }
 
     function loadFormState(form) {
         const tab = form.dataset.scheduleForm;
         if (!tab) return null;
 
-        const raw = getSessionValue(formStatePrefix + tab);
+        const raw = getStorageValue(formStatePrefix + tab);
         if (!raw) return null;
         try {
             return JSON.parse(raw);
@@ -219,7 +219,7 @@
             ? activeTabInput.value
             : 'teachers';
         const queryTab = new URLSearchParams(window.location.search).get('tab');
-        const storedTab = getSessionValue(activeTabKey);
+        const storedTab = getStorageValue(activeTabKey);
         const requestedTab = availableTabs.has(queryTab) ? queryTab : null;
 
         if (isRootPage() && !requestedTab && availableTabs.has(storedTab) && storedTab !== serverTab) {
@@ -231,13 +231,13 @@
 
         const activeTab = requestedTab || (isRootPage() ? storedTab : null) || serverTab;
         if (availableTabs.has(activeTab)) {
-            setSessionValue(activeTabKey, activeTab);
+            setStorageValue(activeTabKey, activeTab);
         }
 
         document.querySelectorAll('[data-schedule-tab]').forEach(function (link) {
             link.addEventListener('click', function () {
                 const tab = link.dataset.scheduleTab;
-                if (availableTabs.has(tab)) setSessionValue(activeTabKey, tab);
+                if (availableTabs.has(tab)) setStorageValue(activeTabKey, tab);
             });
         });
 
