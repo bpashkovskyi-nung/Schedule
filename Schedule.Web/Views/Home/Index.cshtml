@@ -161,7 +161,7 @@
                                                     <th scope="col">Пара</th>
                                                     @foreach (DateOnly date in Model.AuditoriumLoad.Result.Dates)
                                                     {
-                                                        <th scope="col" title="@date.ToString("dd.MM.yyyy")">@date.ToString("dd.MM")</th>
+                                                        <th scope="col" title="@date.ToString("dd.MM.yyyy")">@date.ToString("dd")</th>
                                                     }
                                                 </tr>
                                             </thead>
@@ -178,10 +178,6 @@
                                                                 ? string.Join(Environment.NewLine, lessons.Select(lesson => lesson.Tooltip))
                                                                 : $"{date:dd.MM.yyyy} · пара {pairNumber} · вільно";
                                                             <td class="auditorium-load-cell @(occupied ? "occupied" : "free")" title="@tooltip" aria-label="@tooltip">
-                                                                @if (occupied)
-                                                                {
-                                                                    <span aria-hidden="true">●</span>
-                                                                }
                                                             </td>
                                                         }
                                                     </tr>

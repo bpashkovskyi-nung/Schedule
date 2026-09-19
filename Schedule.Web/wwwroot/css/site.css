@@ -697,35 +697,44 @@ body {
 
 .auditorium-load-grid {
     width: max-content;
-    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.78rem;
+    font-size: 0.62rem;
 }
 
 .auditorium-load-grid th,
 .auditorium-load-grid td {
-    min-width: 42px;
-    height: 28px;
-    padding: 4px 6px;
+    width: 14px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0;
     text-align: center;
     border-right: 1px solid #e9ecef;
     border-bottom: 1px solid #e9ecef;
 }
 
 .auditorium-load-grid thead th {
-    min-width: 58px;
+    width: 14px;
+    min-width: 14px;
+    height: 18px;
     background: #f8f9fa;
     color: #495057;
     font-weight: 600;
-    white-space: nowrap;
+    font-size: 0.55rem;
+}
+
+.auditorium-load-grid thead th:first-child {
+    width: 24px;
+    min-width: 24px;
 }
 
 .auditorium-load-grid tbody th {
     position: sticky;
     left: 0;
     z-index: 1;
-    min-width: 48px;
+    width: 24px;
+    min-width: 24px;
+    height: 14px;
     background: #f8f9fa;
     color: #6c757d;
     font-weight: 600;
@@ -752,8 +761,7 @@ body {
 
 .auditorium-load-cell.occupied {
     background: #ffe169;
-    color: #7a5b00;
-    font-size: 0.68rem;
+    box-shadow: inset 0 0 0 1px #e7b900;
 }
 
 .auditorium-load-cell:hover {

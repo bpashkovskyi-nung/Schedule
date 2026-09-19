@@ -272,6 +272,7 @@ public sealed class HomeController(
                 PossiblePairsPerRoom = result.PossiblePairsPerRoom,
                 Dates = Enumerable.Range(0, to.DayNumber - from.DayNumber + 1)
                     .Select(offset => from.AddDays(offset))
+                    .Where(date => date.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday)
                     .ToList(),
             };
 
