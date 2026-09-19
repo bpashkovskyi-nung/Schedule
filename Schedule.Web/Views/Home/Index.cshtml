@@ -181,7 +181,7 @@
                                                             string tooltip = occupied
                                                                 ? string.Join(Environment.NewLine, lessons.Select(lesson => lesson.Tooltip))
                                                                 : $"{date:dd.MM.yyyy} · пара {pairNumber} · вільно";
-                                                            <td class="auditorium-load-cell @(occupied ? "occupied" : "free")" title="@tooltip" aria-label="@tooltip">
+                                                            <td class="auditorium-load-cell @(occupied ? "occupied" : "free")" title="@tooltip" data-tooltip="@tooltip" aria-label="@tooltip" tabindex="0">
                                                             </td>
                                                         }
                                                     </tr>
