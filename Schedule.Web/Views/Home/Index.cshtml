@@ -138,10 +138,16 @@
                             @foreach (AuditoriumLoadItemVm item in Model.AuditoriumLoad.Result.Items)
                             {
                                 double percent = Math.Min(100, Math.Max(0, item.Percent));
+                                int targetGridWidth = Model.AuditoriumLoad.PeriodKey switch
+                                {
+                                    "to_end_of_week" or "current_week" => 560,
+                                    "current_month" or "previous_month" => 420,
+                                    _ => 280,
+                                };
                                 int dayCellSize = Math.Clamp(
-                                    280 / Math.Max(1, Model.AuditoriumLoad.Result.Dates.Count),
+                                    targetGridWidth / Math.Max(1, Model.AuditoriumLoad.Result.Dates.Count),
                                     12,
-                                    20);
+                                    28);
                                 <div class="auditorium-load-item card shadow-none">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
