@@ -704,9 +704,9 @@ body {
 
 .auditorium-load-grid th,
 .auditorium-load-grid td {
-    width: 14px;
-    min-width: 14px;
-    height: 14px;
+    width: var(--auditorium-cell-size);
+    min-width: var(--auditorium-cell-size);
+    height: var(--auditorium-cell-size);
     padding: 0;
     text-align: center;
     border-right: 1px solid #e9ecef;
@@ -714,9 +714,9 @@ body {
 }
 
 .auditorium-load-grid thead th {
-    width: 14px;
-    min-width: 14px;
-    height: 18px;
+    width: var(--auditorium-cell-size);
+    min-width: var(--auditorium-cell-size);
+    height: calc(var(--auditorium-cell-size) + 4px);
     background: #f8f9fa;
     color: #495057;
     font-weight: 600;
@@ -734,7 +734,7 @@ body {
     z-index: 1;
     width: 24px;
     min-width: 24px;
-    height: 14px;
+    height: var(--auditorium-cell-size);
     background: #f8f9fa;
     color: #6c757d;
     font-weight: 600;
