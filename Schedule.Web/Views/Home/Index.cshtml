@@ -166,7 +166,9 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @for (int pairNumber = 1; pairNumber <= 8; pairNumber++)
+                                                @for (int pairNumber = Model.AuditoriumLoad.PairsFrom;
+                                                     pairNumber <= Model.AuditoriumLoad.PairsTo;
+                                                     pairNumber++)
                                                 {
                                                     <tr>
                                                         <th scope="row">@pairNumber</th>
