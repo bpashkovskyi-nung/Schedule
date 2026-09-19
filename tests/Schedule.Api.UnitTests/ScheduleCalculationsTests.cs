@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Schedule.Api.Configuration;
 using Schedule.Api.Services;
+using Schedule.Contracts.AuditoriumLoad;
 using Schedule.Contracts.ReferenceData;
 using Schedule.Contracts.Schedules;
 using Schedule.Contracts.Workload;
@@ -37,6 +38,41 @@ public sealed class ScheduleCalculationsTests
 
         ScheduleCalculations.CountActualPairs(items, pairsFrom: 1, pairsTo: 8)
             .Should().Be(2);
+    }
+
+    [Fact]
+    public void BuildAuditoriumLessons_ReturnsOnlyValidEightPairSlots()
+    {
+        ScheduleItem[] items =
+        [
+            new()
+            {
+                Date = "24.08.2026",
+                LessonNumber = "1",
+                LessonTime = "08:00 - 09:20",
+                LessonDescription = "(Л) Математика",
+            },
+            new()
+            {
+                Date = "24.08.2026",
+                LessonNumber = "9",
+                LessonDescription = "(Л) Поза сіткою",
+            },
+            new()
+            {
+                Date = "25.08.2026",
+                LessonNumber = "2",
+                LessonDescription = " ",
+            },
+        ];
+
+        IReadOnlyList<AuditoriumLoadLessonDto> result =
+            ScheduleCalculations.BuildAuditoriumLessons(items);
+
+        result.Should().ContainSingle();
+        result[0].Date.Should().Be(new DateOnly(2026, 8, 24));
+        result[0].PairNumber.Should().Be(1);
+        result[0].PairTime.Should().Be("08:00 - 09:20");
     }
 
     [Fact]

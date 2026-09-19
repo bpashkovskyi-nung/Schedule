@@ -154,6 +154,41 @@
                                             <div class="progress-bar" style="width:@(percent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;background-color:@item.HeatColor"></div>
                                         </div>
                                     </div>
+                                    <div class="auditorium-load-grid-wrap mt-3">
+                                        <table class="auditorium-load-grid" aria-label="Сітка занять аудиторії @item.RoomName">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Пара</th>
+                                                    @foreach (DateOnly date in Model.AuditoriumLoad.Result.Dates)
+                                                    {
+                                                        <th scope="col" title="@date.ToString("dd.MM.yyyy")">@date.ToString("dd.MM")</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (int pairNumber = 1; pairNumber <= 8; pairNumber++)
+                                                {
+                                                    <tr>
+                                                        <th scope="row">@pairNumber</th>
+                                                        @foreach (DateOnly date in Model.AuditoriumLoad.Result.Dates)
+                                                        {
+                                                            IReadOnlyList<AuditoriumLoadSlotVm> lessons = item.GetLessons(date, pairNumber);
+                                                            bool occupied = lessons.Count > 0;
+                                                            string tooltip = occupied
+                                                                ? string.Join(Environment.NewLine, lessons.Select(lesson => lesson.Tooltip))
+                                                                : $"{date:dd.MM.yyyy} · пара {pairNumber} · вільно";
+                                                            <td class="auditorium-load-cell @(occupied ? "occupied" : "free")" title="@tooltip" aria-label="@tooltip">
+                                                                @if (occupied)
+                                                                {
+                                                                    <span aria-hidden="true">●</span>
+                                                                }
+                                                            </td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             }
                         </div>

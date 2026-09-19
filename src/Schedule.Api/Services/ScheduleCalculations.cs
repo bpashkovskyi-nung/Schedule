@@ -1,3 +1,4 @@
+using System.Globalization;
 using Dekanat.ScheduleSdk.Models;
 using Schedule.Contracts.AuditoriumLoad;
 using Schedule.Contracts.ReferenceData;
@@ -77,8 +78,43 @@ internal static class ScheduleCalculations
         return slots.Count;
     }
 
+    public static IReadOnlyList<AuditoriumLoadLessonDto> BuildAuditoriumLessons(
+        IReadOnlyList<ScheduleItem>? items)
+    {
+        return (items ?? [])
+            .Where(item =>
+                TryParseDate(item.Date, out _) &&
+                int.TryParse(item.LessonNumber, out int pairNumber) &&
+                pairNumber is >= 1 and <= 8 &&
+                !string.IsNullOrWhiteSpace(item.LessonDescription))
+            .Select(item =>
+            {
+                TryParseDate(item.Date, out DateOnly date);
+                int.TryParse(item.LessonNumber, out int pairNumber);
+
+                return new AuditoriumLoadLessonDto
+                {
+                    Date = date,
+                    PairNumber = pairNumber,
+                    PairTime = item.LessonTime ?? string.Empty,
+                    Description = item.LessonDescription!.Trim(),
+                };
+            })
+            .OrderBy(item => item.Date)
+            .ThenBy(item => item.PairNumber)
+            .ToList();
+    }
+
     public static IReadOnlyList<AuditoriumLoadItemDto> SortLoadItems(IEnumerable<AuditoriumLoadItemDto> items) =>
         items.OrderByDescending(x => x.Percent).ThenBy(x => x.BuildingName).ThenBy(x => x.RoomName).ToList();
+
+    private static bool TryParseDate(string? value, out DateOnly date) =>
+        DateOnly.TryParseExact(
+            value,
+            ["dd.MM.yyyy", "yyyy-MM-dd"],
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out date);
 
     private static string? ExtractSessionType(string? description)
     {

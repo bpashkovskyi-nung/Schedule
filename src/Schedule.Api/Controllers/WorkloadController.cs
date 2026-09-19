@@ -122,6 +122,7 @@ public sealed class WorkloadController(
                         Percent = possiblePairs > 0 ? actualPairs * 100.0 / possiblePairs : 0,
                         ActualPairs = actualPairs,
                         PossiblePairs = possiblePairs,
+                        Lessons = ScheduleCalculations.BuildAuditoriumLessons(export.ScheduleItems),
                     };
                 }
                 catch (PsRozkladApiException)
@@ -134,6 +135,7 @@ public sealed class WorkloadController(
                         Percent = 0,
                         ActualPairs = 0,
                         PossiblePairs = possiblePairs,
+                        Lessons = [],
                     };
                 }
                 finally

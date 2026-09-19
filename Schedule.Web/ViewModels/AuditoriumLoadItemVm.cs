@@ -9,6 +9,10 @@ public sealed class AuditoriumLoadItemVm
     public required double Percent { get; init; }
     public required int ActualPairs { get; init; }
     public required int PossiblePairs { get; init; }
+    public IReadOnlyList<AuditoriumLoadSlotVm> Lessons { get; init; } = [];
+
+    public IReadOnlyList<AuditoriumLoadSlotVm> GetLessons(DateOnly date, int pairNumber) =>
+        Lessons.Where(lesson => lesson.Date == date && lesson.PairNumber == pairNumber).ToList();
 
     public string BlockDisplayName
     {

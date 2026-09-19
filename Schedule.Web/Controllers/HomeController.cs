@@ -259,10 +259,20 @@ public sealed class HomeController(
                     Percent = item.Percent,
                     ActualPairs = item.ActualPairs,
                     PossiblePairs = item.PossiblePairs,
+                    Lessons = item.Lessons.Select(lesson => new AuditoriumLoadSlotVm
+                    {
+                        Date = lesson.Date,
+                        PairNumber = lesson.PairNumber,
+                        PairTime = lesson.PairTime,
+                        Description = lesson.Description,
+                    }).ToList(),
                 }).ToList(),
                 ErrorCount = result.ErrorCount,
                 WorkingDays = result.WorkingDays,
                 PossiblePairsPerRoom = result.PossiblePairsPerRoom,
+                Dates = Enumerable.Range(0, to.DayNumber - from.DayNumber + 1)
+                    .Select(offset => from.AddDays(offset))
+                    .ToList(),
             };
 
             string scope = string.IsNullOrWhiteSpace(form.BlockName)

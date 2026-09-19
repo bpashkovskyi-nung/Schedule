@@ -687,3 +687,76 @@ body {
     padding: 14px 16px;
     margin-bottom: 0 !important;
 }
+
+.auditorium-load-grid-wrap {
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.auditorium-load-grid {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.78rem;
+}
+
+.auditorium-load-grid th,
+.auditorium-load-grid td {
+    min-width: 42px;
+    height: 28px;
+    padding: 4px 6px;
+    text-align: center;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.auditorium-load-grid thead th {
+    min-width: 58px;
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.auditorium-load-grid tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 48px;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.auditorium-load-grid tr:last-child th,
+.auditorium-load-grid tr:last-child td {
+    border-bottom: 0;
+}
+
+.auditorium-load-grid th:last-child,
+.auditorium-load-grid td:last-child {
+    border-right: 0;
+}
+
+.auditorium-load-cell {
+    cursor: help;
+    transition: background-color 0.15s ease;
+}
+
+.auditorium-load-cell.free {
+    background: #fff;
+}
+
+.auditorium-load-cell.occupied {
+    background: #ffe169;
+    color: #7a5b00;
+    font-size: 0.68rem;
+}
+
+.auditorium-load-cell:hover {
+    outline: 2px solid #6c757d;
+    outline-offset: -2px;
+}

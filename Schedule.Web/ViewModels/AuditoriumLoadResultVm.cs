@@ -6,4 +6,5 @@ public sealed class AuditoriumLoadResultVm
     public int ErrorCount { get; init; }
     public int WorkingDays { get; init; }
     public int PossiblePairsPerRoom { get; init; }
+    public required IReadOnlyList<DateOnly> Dates { get; init; }
 }
