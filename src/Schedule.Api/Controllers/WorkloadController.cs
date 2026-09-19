@@ -34,7 +34,7 @@ public sealed class WorkloadController(
             return BadRequest(new ApiErrorResponse("department_required", "Необхідно передати підрозділ."));
         }
 
-        ApiErrorResponse? periodError = InvalidPeriod(from, to, apiOptions.MaxLoadDays);
+        ApiErrorResponse? periodError = InvalidPeriod(from, to);
         if (periodError is not null) return BadRequest(periodError);
 
         try
@@ -88,7 +88,7 @@ public sealed class WorkloadController(
             return BadRequest(new ApiErrorResponse("invalid_pairs_range", "Діапазон пар некоректний."));
         }
 
-        ApiErrorResponse? periodError = InvalidPeriod(from, to, apiOptions.MaxLoadDays);
+        ApiErrorResponse? periodError = InvalidPeriod(from, to);
         if (periodError is not null) return BadRequest(periodError);
 
         try

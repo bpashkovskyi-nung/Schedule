@@ -33,23 +33,6 @@ public abstract class ApiControllerBase : ControllerBase
         return null;
     }
 
-    protected ApiErrorResponse? InvalidPeriod(DateOnly from, DateOnly to, int maxDays)
-    {
-        ApiErrorResponse? orderError = InvalidPeriod(from, to);
-        if (orderError is not null)
-        {
-            return orderError;
-        }
-
-        int days = to.DayNumber - from.DayNumber + 1;
-        if (days > maxDays)
-        {
-            return new ApiErrorResponse("period_too_long", $"Максимальний період запиту: {maxDays} днів.");
-        }
-
-        return null;
-    }
-
     protected ActionResult<T> ExternalApiError<T>(PsRozkladApiException exception)
     {
         return StatusCode(StatusCodes.Status502BadGateway, new ApiErrorResponse(

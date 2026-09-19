@@ -4,7 +4,6 @@ public sealed class ScheduleApiOptions
 {
     public const string SectionName = "ScheduleApi";
 
-    public int MaxLoadDays { get; set; } = 31;
     public int AuditoriumConcurrency { get; set; } = 4;
     public int ReferenceCacheMinutes { get; set; } = 10;
     public int ExternalRequestTimeoutSeconds { get; set; } = 60;
