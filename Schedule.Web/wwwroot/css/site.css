@@ -684,12 +684,18 @@ body {
 
 /* Auditorium load */
 .auditorium-load-item {
+    position: relative;
     padding: 14px 16px;
     margin-bottom: 0 !important;
 }
 
+.auditorium-load-item:has(.auditorium-load-cell:hover),
+.auditorium-load-item:has(.auditorium-load-cell:focus-visible) {
+    z-index: 20;
+}
+
 .auditorium-load-grid-wrap {
-    overflow-x: auto;
+    overflow: visible;
     border: 1px solid #dee2e6;
     border-radius: 8px;
     background: #fff;
@@ -705,7 +711,7 @@ body {
 
 .auditorium-load-grid th,
 .auditorium-load-grid td {
-    min-width: 12px;
+    min-width: 0;
     height: 14px;
     padding: 0;
     text-align: center;
@@ -750,6 +756,7 @@ body {
 
 .auditorium-load-cell {
     position: relative;
+    z-index: 0;
     cursor: help;
     transition: background-color 0.15s ease;
 }
@@ -764,6 +771,7 @@ body {
 }
 
 .auditorium-load-cell:hover {
+    z-index: 100;
     outline: 2px solid #6c757d;
     outline-offset: -2px;
 }
@@ -772,7 +780,7 @@ body {
     position: absolute;
     left: 50%;
     bottom: calc(100% + 6px);
-    z-index: 10;
+    z-index: 1000;
     width: max-content;
     max-width: 280px;
     padding: 6px 8px;
