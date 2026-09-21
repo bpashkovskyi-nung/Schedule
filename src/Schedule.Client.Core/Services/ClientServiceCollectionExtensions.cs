@@ -9,7 +9,11 @@ public static class ClientServiceCollectionExtensions
         this IServiceCollection services,
         Uri apiBaseAddress)
     {
-        services.AddScoped(_ => new HttpClient { BaseAddress = apiBaseAddress });
+        services.AddScoped(_ => new HttpClient
+        {
+            BaseAddress = apiBaseAddress,
+            Timeout = TimeSpan.FromSeconds(30),
+        });
         services.AddScoped<IScheduleApiClient, ScheduleApiClient>();
         services.AddScoped<ReferenceDataState>();
         services.AddScoped<ScheduleState>();

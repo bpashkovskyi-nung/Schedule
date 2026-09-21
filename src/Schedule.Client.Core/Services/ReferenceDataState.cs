@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Schedule.Client.Core.Api;
 using Schedule.Contracts.ReferenceData;
 
@@ -26,9 +27,17 @@ public sealed class ReferenceDataState
             {
                 Data = await apiClient.GetReferenceDataAsync(cancellationToken);
             }
+            catch (TaskCanceledException)
+            {
+                ErrorMessage = "API не відповіло протягом 30 секунд. Перевірте інтернет-з’єднання та спробуйте ще раз.";
+            }
             catch (Exception exception) when (exception is ScheduleApiException or HttpRequestException)
             {
                 ErrorMessage = exception.Message;
+            }
+            catch (JsonException)
+            {
+                ErrorMessage = "API повернуло дані, які застосунок не зміг прочитати. Оновіть застосунок або спробуйте ще раз.";
             }
             finally
             {

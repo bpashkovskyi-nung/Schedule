@@ -20,7 +20,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MobileScheduleSettingsStore>();
         builder.Services.AddSingleton(sp => sp.GetRequiredService<MobileScheduleSettingsStore>().Load());
         builder.Services.AddSingleton<MobileNotificationScheduler>();
-        // 10.0.2.2 points to the Windows host from the Android emulator in Debug.
+        // The mobile app uses the same live API in Debug and Release.
         builder.Services.AddScheduleClientCore(MobileApiConfiguration.BaseUri);
 
 #if DEBUG
