@@ -111,6 +111,7 @@ public sealed class ScheduleApiService(
         {
             TargetType = targetType,
             ObjectId = objectId,
+            ObjectName = objectId,
             Period = new DateRangeDto(from, to),
             Lessons = (export.ScheduleItems ?? []).Select(MapLesson).ToList(),
         };
