@@ -1,5 +1,7 @@
 using Dekanat.ScheduleSdk.Exceptions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Schedule.Api.Configuration;
 using Schedule.Api.Services;
 using Schedule.Contracts.Common;
 using Schedule.Contracts.Schedules;
@@ -8,8 +10,11 @@ namespace Schedule.Api.Controllers;
 
 [Route("api/v1/schedules")]
 public sealed class SchedulesController(
-    IScheduleApiService scheduleService) : ApiControllerBase
+    IScheduleApiService scheduleService,
+    IOptions<ScheduleApiOptions> options) : ApiControllerBase
 {
+    private readonly ScheduleApiOptions apiOptions = options.Value;
+
     [HttpGet("{targetType}/{objectId}")]
     [ProducesResponseType<ScheduleResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
@@ -71,7 +76,7 @@ public sealed class SchedulesController(
             return BadRequest(periodError);
         }
 
-        if (scheduleService.IsDatabaseSource)
+        if (scheduleService.IsDatabaseSource || apiOptions.GenerateIcalFromJson)
         {
             byte[] calendar = await scheduleService.GenerateIcalAsync(
                 parsedTarget,

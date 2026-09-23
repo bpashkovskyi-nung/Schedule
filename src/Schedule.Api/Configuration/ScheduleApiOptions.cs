@@ -10,6 +10,7 @@ public sealed class ScheduleApiOptions
     public int ExternalRetryCount { get; set; } = 2;
     public int WorkloadPermitLimit { get; set; } = 2;
     public int WorkloadWindowSeconds { get; set; } = 30;
+    public bool GenerateIcalFromJson { get; set; }
     public bool EnableOpenApi { get; set; }
     public string TimetableBaseUrl { get; set; } = "https://dekanat.nung.edu.ua/cgi-bin/timetable.cgi";
 }
