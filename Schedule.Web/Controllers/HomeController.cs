@@ -108,7 +108,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindRoomName(model.Reference, form.RoomId) ?? "Аудиторія";
 
             model.Rooms.Result = BuildScheduleResult(
-                response, title, ScheduleTargetType.Room, form.RoomId, from, to);
+                response, title, ScheduleTargetType.Room, form.RoomId, from, to, form.HidePastDates);
         }
         catch (Exception exception)
         {
@@ -142,7 +142,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindTeacherName(model.Reference, form.TeacherId) ?? "Викладач";
 
             model.Teachers.Result = BuildScheduleResult(
-                response, title, ScheduleTargetType.Teacher, form.TeacherId, from, to);
+                response, title, ScheduleTargetType.Teacher, form.TeacherId, from, to, form.HidePastDates);
         }
         catch (Exception exception)
         {
@@ -176,7 +176,7 @@ public sealed class HomeController(
             string title = ScheduleLookup.FindGroupName(model.Reference, form.GroupId) ?? "Група";
 
             model.Groups.Result = BuildScheduleResult(
-                response, title, ScheduleTargetType.Group, form.GroupId, from, to);
+                response, title, ScheduleTargetType.Group, form.GroupId, from, to, form.HidePastDates);
         }
         catch (Exception exception)
         {
@@ -314,10 +314,11 @@ public sealed class HomeController(
         ScheduleTargetType targetType,
         string objectId,
         DateOnly from,
-        DateOnly to)
+        DateOnly to,
+        bool hidePastDates)
     {
         IReadOnlyDictionary<string, IReadOnlyList<ScheduleItemVm>> grouped =
-            ScheduleDisplayService.GroupByDate(response.Lessons);
+            ScheduleDisplayService.GroupByDate(response.Lessons, hidePastDates);
 
         return new ScheduleResultVm
         {

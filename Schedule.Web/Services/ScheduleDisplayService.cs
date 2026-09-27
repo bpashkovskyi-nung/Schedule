@@ -8,20 +8,60 @@ namespace Schedule.Web.Services;
 internal static class ScheduleDisplayService
 {
     internal static IReadOnlyDictionary<string, IReadOnlyList<ScheduleItemVm>> GroupByDate(
-        IReadOnlyList<LessonDto>? items)
+        IReadOnlyList<LessonDto>? items,
+        bool hidePastDates = false,
+        DateTime? now = null)
     {
         if (items is null || items.Count == 0)
         {
             return new Dictionary<string, IReadOnlyList<ScheduleItemVm>>();
         }
 
+        DateTime current = now ?? DateTime.Now;
+        DateOnly today = DateOnly.FromDateTime(current);
+        TimeOnly currentTime = TimeOnly.FromDateTime(current);
+
         return items
             .Where(item => item.Date.HasValue && !string.IsNullOrWhiteSpace(item.LessonDescription))
+            .Where(item => !hidePastDates || !IsPast(item, today, currentTime))
             .GroupBy(item => item.Date!.Value)
             .OrderBy(group => group.Key)
             .ToDictionary(
                 group => group.Key.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
                 group => (IReadOnlyList<ScheduleItemVm>)group.Select(MapItem).ToList());
+    }
+
+    private static bool IsPast(LessonDto lesson, DateOnly today, TimeOnly currentTime)
+    {
+        DateOnly lessonDate = lesson.Date!.Value;
+        if (lessonDate < today)
+        {
+            return true;
+        }
+
+        if (lessonDate > today || !TryGetEndTime(lesson.LessonTime, out TimeOnly endTime))
+        {
+            return false;
+        }
+
+        return endTime <= currentTime;
+    }
+
+    private static bool TryGetEndTime(string value, out TimeOnly endTime)
+    {
+        endTime = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        string[] parts = value.Split(['-', '–', '—'], 2, StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+               TimeOnly.TryParse(
+                   parts[1],
+                   CultureInfo.InvariantCulture,
+                   DateTimeStyles.AllowWhiteSpaces,
+                   out endTime);
     }
 
     private static ScheduleItemVm MapItem(LessonDto item) => new()

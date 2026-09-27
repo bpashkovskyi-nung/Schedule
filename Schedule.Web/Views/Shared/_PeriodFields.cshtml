@@ -6,6 +6,7 @@
     string toId = ViewData["ToId"] as string ?? prefix + "To";
     var options = (IReadOnlyList<PeriodOptionVm>)ViewData["PeriodOptions"]!;
     bool isCustom = Model.PeriodKey == "custom";
+    bool showHidePastDates = ViewData["ShowHidePastDates"] as bool? ?? false;
 }
 
 <div class="form-group mb-3">
@@ -38,3 +39,16 @@
     <input type="date" class="form-control" id="@toId" name="ToDate"
            value="@Model.ToDate?.ToString("yyyy-MM-dd")" @(isCustom ? "" : "disabled") required />
 </div>
+@if (showHidePastDates)
+{
+    <div class="form-group mb-3 d-flex align-items-end">
+        <div class="form-check mb-2">
+            <input type="hidden" name="HidePastDates" value="false" />
+            <input class="form-check-input" type="checkbox" id="@(prefix)HidePastDates"
+                   name="HidePastDates" value="true" @(Model.HidePastDates ? "checked" : "") />
+            <label class="form-check-label" for="@(prefix)HidePastDates">
+                Не показувати старі дати
+            </label>
+        </div>
+    </div>
+}

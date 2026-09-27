@@ -81,6 +81,7 @@
                                 ViewData["FromId"] = "roomsFrom";
                                 ViewData["ToId"] = "roomsTo";
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
+                                ViewData["ShowHidePastDates"] = true;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Rooms)
                         </div>
@@ -227,6 +228,7 @@
                                 ViewData["FromId"] = "teachersFrom";
                                 ViewData["ToId"] = "teachersTo";
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
+                                ViewData["ShowHidePastDates"] = true;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Teachers)
                         </div>
@@ -269,6 +271,7 @@
                                 ViewData["FromId"] = "groupsFrom";
                                 ViewData["ToId"] = "groupsTo";
                                 ViewData["PeriodOptions"] = Model.PeriodOptions;
+                                ViewData["ShowHidePastDates"] = true;
                             }
                             @await Html.PartialAsync("_PeriodFields", Model.Groups)
                         </div>

@@ -164,7 +164,8 @@
     }
 
     function setControlValue(form, name, value) {
-        const control = getControl(form, name);
+        const controls = getFormControls(form).filter(control => control.name === name);
+        const control = controls.find(item => item.type === 'checkbox') || controls[0];
         if (!control || value === undefined) return;
 
         if (control.type === 'checkbox') {
