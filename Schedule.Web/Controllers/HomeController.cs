@@ -106,6 +106,7 @@ public sealed class HomeController(
             ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
                 ScheduleTargetType.Room, form.RoomId, from, to, cancellationToken);
             string title = ScheduleLookup.FindRoomName(model.Reference, form.RoomId) ?? "Аудиторія";
+            form.HidePastDates = HasHidePastDatesParameter(form) && form.HidePastDates;
 
             model.Rooms.Result = BuildScheduleResult(
                 response, title, ScheduleTargetType.Room, form.RoomId, from, to, form.HidePastDates);
@@ -140,6 +141,7 @@ public sealed class HomeController(
             ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
                 ScheduleTargetType.Teacher, form.TeacherId, from, to, cancellationToken);
             string title = ScheduleLookup.FindTeacherName(model.Reference, form.TeacherId) ?? "Викладач";
+            form.HidePastDates = HasHidePastDatesParameter(form) && form.HidePastDates;
 
             model.Teachers.Result = BuildScheduleResult(
                 response, title, ScheduleTargetType.Teacher, form.TeacherId, from, to, form.HidePastDates);
@@ -174,6 +176,7 @@ public sealed class HomeController(
             ScheduleResponse response = await scheduleQuery.GetScheduleAsync(
                 ScheduleTargetType.Group, form.GroupId, from, to, cancellationToken);
             string title = ScheduleLookup.FindGroupName(model.Reference, form.GroupId) ?? "Група";
+            form.HidePastDates = HasHidePastDatesParameter(form) && form.HidePastDates;
 
             model.Groups.Result = BuildScheduleResult(
                 response, title, ScheduleTargetType.Group, form.GroupId, from, to, form.HidePastDates);
@@ -352,6 +355,9 @@ public sealed class HomeController(
         Apply(model.TeachingLoad);
         Apply(model.AuditoriumLoad);
     }
+
+    private bool HasHidePastDatesParameter(DateRangeFormVm form) =>
+        Request.Query.ContainsKey(nameof(form.HidePastDates));
 
     private static bool TryParseScheduleMode(string? value, out ScheduleTargetType targetType)
     {
