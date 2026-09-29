@@ -388,6 +388,58 @@ body {
     max-width: 150px;
 }
 
+.auditorium-schedule-rooms-group {
+    min-width: 260px;
+}
+
+.auditorium-schedule-rooms {
+    height: 12rem !important;
+}
+
+.auditorium-schedule-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.auditorium-schedule-pairs {
+    display: grid;
+    gap: 12px;
+}
+
+.auditorium-schedule-pair {
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.auditorium-schedule-pair-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.auditorium-schedule-table th {
+    width: 22%;
+    white-space: nowrap;
+    color: #495057;
+}
+
+.auditorium-schedule-table td,
+.auditorium-schedule-table th {
+    padding: 9px 12px;
+    vertical-align: middle;
+}
+
+.auditorium-schedule-table tr:last-child > * {
+    border-bottom: 0;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;

@@ -17,6 +17,7 @@ public sealed class HomeController(
     [
         "rooms",
         "auditorium-load",
+        "auditorium-schedule",
         "teachers",
         "groups",
         "teaching-load",
@@ -60,6 +61,13 @@ public sealed class HomeController(
     [HttpGet]
     public Task<IActionResult> AuditoriumLoad(AuditoriumLoadFormVm form, CancellationToken cancellationToken) =>
         SearchAuditoriumLoadAsync(form, cancellationToken);
+
+    [HttpGet]
+    public Task<IActionResult> AuditoriumSchedule(
+        AuditoriumScheduleFormVm form,
+        string? navigate,
+        CancellationToken cancellationToken) =>
+        SearchAuditoriumScheduleAsync(form, navigate, cancellationToken);
 
     [HttpGet]
     public IActionResult Ical(
@@ -298,6 +306,87 @@ public sealed class HomeController(
         }
 
         ApplyDefaultDates(model);
+        return View("Index", model);
+    }
+
+    private async Task<IActionResult> SearchAuditoriumScheduleAsync(
+        AuditoriumScheduleFormVm form,
+        string? navigate,
+        CancellationToken cancellationToken)
+    {
+        ScheduleIndexViewModel model = await BuildBaseModelAsync(cancellationToken);
+        model.ActiveTab = "auditorium-schedule";
+        model.AuditoriumSchedule = form;
+
+        if (string.Equals(navigate, "previous", StringComparison.OrdinalIgnoreCase))
+        {
+            form.Date = form.Date.AddDays(-1);
+        }
+        else if (string.Equals(navigate, "next", StringComparison.OrdinalIgnoreCase))
+        {
+            form.Date = form.Date.AddDays(1);
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(form.BlockName) || form.RoomIds.Count == 0)
+            {
+                model.ErrorMessage = "Оберіть корпус і одну або кілька аудиторій";
+                return View("Index", model);
+            }
+
+            IReadOnlyList<ScheduleEntityVm> selectedRooms =
+                ScheduleLookup.GetRoomsForBlock(model.Reference, form.BlockName)
+                    .Where(room => form.RoomIds.Contains(room.Id, StringComparer.Ordinal))
+                    .ToList();
+
+            if (selectedRooms.Count == 0)
+            {
+                model.ErrorMessage = "Оберіть коректні аудиторії для вибраного корпусу";
+                return View("Index", model);
+            }
+
+            AuditoriumLoadResponse response = await scheduleQuery.GetAuditoriumLoadAsync(
+                form.BlockName,
+                form.Date,
+                form.Date,
+                pairsFrom: 1,
+                pairsTo: 8,
+                cancellationToken);
+
+            model.AuditoriumSchedule.Result = new AuditoriumScheduleResultVm
+            {
+                Date = form.Date,
+                Items = selectedRooms
+                    .Select(room =>
+                    {
+                        AuditoriumLoadItemDto? item = response.Items.FirstOrDefault(candidate =>
+                            candidate.BuildingName == form.BlockName && candidate.RoomName == room.Name);
+
+                        return new AuditoriumLoadItemVm
+                        {
+                            RoomName = room.Name,
+                            BlockName = form.BlockName,
+                            Percent = item?.Percent ?? 0,
+                            ActualPairs = item?.ActualPairs ?? 0,
+                            PossiblePairs = item?.PossiblePairs ?? 0,
+                            Lessons = item?.Lessons.Select(lesson => new AuditoriumLoadSlotVm
+                            {
+                                Date = lesson.Date,
+                                PairNumber = lesson.PairNumber,
+                                PairTime = lesson.PairTime,
+                                Description = lesson.Description,
+                            }).ToList() ?? [],
+                        };
+                    })
+                    .ToList(),
+            };
+        }
+        catch (Exception exception)
+        {
+            model.ErrorMessage = exception.Message;
+        }
+
         return View("Index", model);
     }
 

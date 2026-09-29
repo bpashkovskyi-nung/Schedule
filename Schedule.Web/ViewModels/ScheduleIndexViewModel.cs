@@ -11,5 +11,6 @@ public sealed class ScheduleIndexViewModel
     public GroupsScheduleFormVm Groups { get; set; } = new();
     public TeachingLoadFormVm TeachingLoad { get; set; } = new();
     public AuditoriumLoadFormVm AuditoriumLoad { get; set; } = new();
+    public AuditoriumScheduleFormVm AuditoriumSchedule { get; set; } = new();
 
 }

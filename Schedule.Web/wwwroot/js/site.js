@@ -2,6 +2,7 @@
     const availableTabs = new Set([
         'rooms',
         'auditorium-load',
+        'auditorium-schedule',
         'teachers',
         'groups',
         'teaching-load',
@@ -83,6 +84,36 @@
         updateRooms();
     }
 
+    function initMultiCascade(blockId, roomsId, roomsJsonId) {
+        const block = document.getElementById(blockId);
+        const rooms = document.getElementById(roomsId);
+        const dataEl = document.getElementById(roomsJsonId);
+        if (!block || !rooms || !dataEl) return;
+
+        const roomsByBlock = JSON.parse(dataEl.textContent || '{}');
+        function updateRooms() {
+            const blockName = block.value;
+            const selected = new Set(Array.from(rooms.selectedOptions).map(option => option.value));
+            rooms.innerHTML = '';
+            rooms.disabled = !blockName;
+            if (!blockName) return;
+
+            (roomsByBlock[blockName] || []).forEach(function (room) {
+                const option = document.createElement('option');
+                option.value = room.id;
+                option.textContent = room.name;
+                option.selected = selected.has(room.id);
+                rooms.appendChild(option);
+            });
+        }
+
+        block.addEventListener('change', function () {
+            rooms.selectedIndex = -1;
+            updateRooms();
+        });
+        updateRooms();
+    }
+
     function initDepartmentCascade(deptId, entityId, entitiesJsonId, placeholder) {
         const dept = document.getElementById(deptId);
         const entity = document.getElementById(entityId);
@@ -131,6 +162,11 @@
                 return;
             }
 
+            if (control.multiple) {
+                values[control.name] = Array.from(control.selectedOptions).map(option => option.value);
+                return;
+            }
+
             values[control.name] = control.value;
         });
 
@@ -170,6 +206,11 @@
 
         if (control.type === 'checkbox') {
             control.checked = value === true || value === 'true';
+        } else if (control.multiple) {
+            const selectedValues = new Set(Array.isArray(value) ? value : [value]);
+            Array.from(control.options).forEach(option => {
+                option.selected = selectedValues.has(option.value);
+            });
         } else if (control.type !== 'radio' || control.value === value) {
             control.value = value;
         }
@@ -180,6 +221,7 @@
 
         const cascade = {
             rooms: ['BlockName', 'RoomId'],
+            'auditorium-schedule': ['BlockName', 'RoomIds'],
             teachers: ['DepartmentName', 'TeacherId'],
             groups: ['DepartmentName', 'GroupId'],
         };
@@ -249,6 +291,7 @@
         initPeriodFields('auditoriumsForm', 'auditoriumsPeriod', 'auditoriumsFrom', 'auditoriumsTo');
 
         initCascade('roomsBlock', 'roomsRoom', 'roomsByBlockJson');
+        initMultiCascade('auditoriumScheduleBlock', 'auditoriumScheduleRooms', 'roomsByBlockJson');
         initDepartmentCascade('teachersDept', 'teachersTeacher', 'teachersByDeptJson', 'Оберіть викладача');
         initDepartmentCascade('groupsDept', 'groupsGroup', 'groupsByDeptJson', 'Оберіть групу');
 
