@@ -4,11 +4,11 @@
     <Project Path="src/Schedule.Client.Core/Schedule.Client.Core.csproj" />
     <Project Path="src/Schedule.Contracts/Schedule.Contracts.csproj" />
     <Project Path="src/Schedule.Mobile/Schedule.Mobile.csproj" />
+    <Project Path="src/Schedule.Web/Schedule.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Schedule.Api.UnitTests/Schedule.Api.UnitTests.csproj" />
     <Project Path="tests/Schedule.Client.Core.UnitTests/Schedule.Client.Core.UnitTests.csproj" />
     <Project Path="tests/Schedule.Web.UnitTests/Schedule.Web.UnitTests.csproj" />
   </Folder>
-  <Project Path="Schedule.Web/Schedule.Web.csproj" />
 </Solution>

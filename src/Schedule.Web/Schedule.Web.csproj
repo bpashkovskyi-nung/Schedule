@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Schedule.Client.Core\Schedule.Client.Core.csproj" />
-    <ProjectReference Include="..\src\Schedule.Contracts\Schedule.Contracts.csproj" />
+    <ProjectReference Include="..\Schedule.Client.Core\Schedule.Client.Core.csproj" />
+    <ProjectReference Include="..\Schedule.Contracts\Schedule.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

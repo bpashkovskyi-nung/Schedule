@@ -7,7 +7,7 @@
 - `src/Schedule.Api` — ASP.NET Core API, яке є єдиним шаром інтеграції з `Dekanat.ScheduleSdk`;
 - `src/Schedule.Contracts` — DTO та enum-и HTTP API;
 - `src/Schedule.Client.Core` — спільний typed API client і client state;
-- `Schedule.Web` — тонкий legacy MVC-клієнт, який звертається тільки до API;
+- `src/Schedule.Web` — тонкий legacy MVC-клієнт, який звертається тільки до API;
 - `src/Schedule.Mobile` — .NET MAUI Blazor Hybrid для Android, який звертається тільки до API.
 
 API може використовувати `Dekanat` або `Database` як джерело розкладу. MVC і Android не знають, яке джерело активне.
@@ -19,7 +19,7 @@ API може використовувати `Dekanat` або `Database` як д�
 
 Проєкти:
 
-- `Schedule.Web/Schedule.Web.csproj`
+- `src/Schedule.Web/Schedule.Web.csproj`
 - `tests/Schedule.Web.UnitTests/Schedule.Web.UnitTests.csproj`
 - `src/Schedule.Api/Schedule.Api.csproj`
 - `src/Schedule.Contracts/Schedule.Contracts.csproj`
@@ -49,10 +49,10 @@ API кешує довідники на 10 хвилин і повертає по�
 В іншому терміналі:
 
 ```bash
-dotnet run --project Schedule.Web/Schedule.Web.csproj
+dotnet run --project src/Schedule.Web/Schedule.Web.csproj
 ```
 
-MVC використовує `ApiBaseUrl` із `Schedule.Web/appsettings.json`.
+MVC використовує `ApiBaseUrl` із `src/Schedule.Web/appsettings.json`.
 Усі форми залишаються GET-запитами, тому параметри видно в URL, а F5 повторює пошук.
 
 ## iCal

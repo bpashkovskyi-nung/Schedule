@@ -22,7 +22,7 @@
 ## Запуск
 
 ```bash
-cd Schedule.Web
+cd src/Schedule.Web
 dotnet run
 ```
 
