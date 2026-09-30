@@ -16,6 +16,8 @@ builder.Services.Configure<ScheduleApiOptions>(
     builder.Configuration.GetSection(ScheduleApiOptions.SectionName));
 builder.Services.Configure<ScheduleSourceOptions>(
     builder.Configuration.GetSection(ScheduleSourceOptions.SectionName));
+builder.Services.Configure<ScheduleSyncOptions>(
+    builder.Configuration.GetSection(ScheduleSyncOptions.SectionName));
 
 int externalTimeoutSeconds = Math.Max(
     1,
@@ -23,6 +25,11 @@ int externalTimeoutSeconds = Math.Max(
 
 ScheduleSourceOptions scheduleSource = new();
 builder.Configuration.GetSection(ScheduleSourceOptions.SectionName).Bind(scheduleSource);
+
+builder.Services.AddPsRozkladClient(options =>
+{
+    options.RequestTimeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
+});
 
 if (scheduleSource.IsDatabase)
 {
@@ -35,13 +42,11 @@ if (scheduleSource.IsDatabase)
 
     builder.Services.AddDbContextFactory<ScheduleDbContext>(options => options.UseSqlServer(connectionString));
     builder.Services.AddScoped<IScheduleDataSource, DatabaseScheduleDataSource>();
+    builder.Services.AddScoped<IScheduleSynchronizer, DekanatScheduleSynchronizer>();
+    builder.Services.AddHostedService<ScheduleSyncBackgroundService>();
 }
 else if (string.Equals(scheduleSource.Provider, "Dekanat", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddPsRozkladClient(options =>
-    {
-        options.RequestTimeout = TimeSpan.FromSeconds(externalTimeoutSeconds);
-    });
     builder.Services.AddScoped<IScheduleDataSource, DekanatScheduleDataSource>();
 }
 else
