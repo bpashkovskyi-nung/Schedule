@@ -1,0 +1,23 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\Schedule.Api\\Schedule.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Schedule.Web\\Schedule.Web\\Schedule.Web.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Schedule.Web\\Schedule.Web.Client\\Schedule.Web.Client.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Schedule.Mobile\\Schedule.Mobile.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
